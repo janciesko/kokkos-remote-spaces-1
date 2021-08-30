@@ -69,6 +69,73 @@ namespace Kokkos {
 namespace Experimental {
 namespace RACERlib {
 
+/*
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2(T * ptr, const T val)
+{
+  return Kokkos::atomic_fetch_add(ptr, val);
+}*/
+
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2(T * ptr)
+{
+  return Kokkos::atomic_fetch_add(ptr, 0);
+}
+
+/*
+inline __device__ ctype atomic_fetch_add(ctype* dest, ctype value, __DESUL_IMPL_CUDA_ASM_MEMORY_ORDER,\
+ __DESUL_IMPL_CUDA_ASM_MEMORY_SCOPE) { \
+  ctype result=0; \
+  asm volatile("atom.add" __DESUL_IMPL_CUDA_ASM_MEMORY_ORDER_ASM __DESUL_IMPL_CUDA_ASM_MEMORY_SCOPE_ASM asm_ctype
+  \ " %0,[%1],%2;" : reg_ret_ctype(result) : "l"(dest),reg_ctype(value) : "memory"); \
+  return result; \
+}*/
+
+#define __DESUL_IMPL_CUDA_ASM_MEMORY_ORDER_ASM ".relaxed"
+#define __DESUL_IMPL_CUDA_ASM_MEMORY_SCOPE_ASM ".sys"
+#define asm_ctype ".u64"
+#define reg_ret_ctype "=l"
+#define reg_ctype "l"
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2_host(T * dest)
+{
+  #ifdef __CUDA_ARCH__
+  T value = 0;
+  T result;
+  asm volatile("atom.add" __DESUL_IMPL_CUDA_ASM_MEMORY_ORDER_ASM  \
+  __DESUL_IMPL_CUDA_ASM_MEMORY_SCOPE_ASM asm_ctype " %0,[%1],%2;" : reg_ret_ctype(result) : "l"(dest),reg_ctype(value) : "memory");
+  return result;
+
+  #else
+  return *dest;
+  #endif
+}
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+void volatile_store_2_host(T * dest, const uint64_t val)
+{
+  T result;
+
+asm volatile("atom.exch" __DESUL_IMPL_CUDA_ASM_MEMORY_ORDER_ASM __DESUL_IMPL_CUDA_ASM_MEMORY_SCOPE_ASM \
+ ".b64" " %0,[%1],%2;" : "=l"(result) : "l"(dest),"l"(val) : "memory");
+
+}
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+void volatile_store_2(T * ptr, const T val)
+{
+  Kokkos::atomic_exchange(ptr, val);
+}
+
+
 #define NEW_REQUEST_BIT 0
 #define NEW_REQUEST_MASK 1
 
@@ -139,7 +206,7 @@ template <class T> struct SPSC_LockFree_Pool {
   }
 
   T pop() {
-    while (read_head == volatile_load(&write_head))
+    while (read_head == volatile_load_2(&write_head))
       ;
     auto idx = read_head % queue_size;
     T t = queue[idx];

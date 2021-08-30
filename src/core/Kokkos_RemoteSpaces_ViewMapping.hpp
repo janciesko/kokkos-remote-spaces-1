@@ -1194,7 +1194,7 @@ public:
 
   template <class ExecSpace> void clear_fence(ExecSpace &&e) const {
     //Notify final pack_response_kernel to stop
-    volatile_store(m_handle.e->sge->fence_done_flag, 1u);
+    volatile_store_2(m_handle.e->sge->fence_done_flag, 1u);
   }
 
   size_t extent_0(const int i) const {

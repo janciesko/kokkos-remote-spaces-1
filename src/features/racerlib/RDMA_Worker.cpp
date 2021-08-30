@@ -54,6 +54,7 @@ template class RdmaScatterGatherWorker<double>;
 template class RdmaScatterGatherWorker<size_t>;
 // etc.
 
+
 template <class T>
 KOKKOS_FUNCTION T RdmaScatterGatherWorker<T>::get(int pe, uint32_t offset) {
   uint64_t *tail_ctr = &tx_element_request_ctrs[pe];
@@ -63,15 +64,20 @@ KOKKOS_FUNCTION T RdmaScatterGatherWorker<T>::get(int pe, uint32_t offset) {
   uint64_t global_buf_slot = pe * queue_size + buf_slot;
 
   assert(trip_number < 1000);
+  int64_t counter = 0;
 
   // If we have wrapped around the queue, wait for it to be free
   // this is a huge amount of extra storage, but it's the only way
   // to do it. I can't just use the ack counter to know when a slot
   // is free because I could overwrite the value before thread reads it
-  while (volatile_load((
+  while (volatile_load_2((
              unsigned int *)&tx_element_request_trip_counts[global_buf_slot]) !=
          trip_number)
-    ;
+         {
+         counter++;
+         if(counter > 1000000)
+          Kokkos::abort("COUNTER_FAILED A");
+         }
 
 
   // Enough previous requests are cleared that we can join the queue
@@ -83,21 +89,32 @@ KOKKOS_FUNCTION T RdmaScatterGatherWorker<T>::get(int pe, uint32_t offset) {
   // the requested offset is a combination of the actual offset
   // and flag indicate that this is a new request
   uint32_t offset_request = MAKE_ELEMENT_REQUEST(offset, trip_number);
-  volatile_store(req_ptr, offset_request);
+  volatile_store_2(req_ptr, offset_request);
 
   // We now have to spin waiting for the request to be satisfied
   // we wil get the signal that this is ready when the ack count
   // exceeds our request idx
 
+  counter = 0;
+
   uint64_t *ack_ptr = &ack_ctrs_d[pe];
-  uint64_t ack = volatile_load(ack_ptr);
+  uint64_t ack = volatile_load_2(ack_ptr);
+
   while (ack <= idx) {
-    ack = volatile_load(ack_ptr);
+    ack = volatile_load_2(ack_ptr);
+    //ack = Kokkos::atomic_fetch_add(ack_ptr, 0);
+    counter++;
+    if(counter > (int64_t)1000000)
+    {
+      printf("***************: %lu, %lu\n",ack, idx );
+    Kokkos::abort("COUNTER_FAILED B");
+    }
+
   }
 
   // at this point, our data is now available in the reply buffer
   T *reply_buffer_T = (T *)rx_element_reply_queue;
-  T ret = volatile_load(&reply_buffer_T[global_buf_slot]);
+  T ret = volatile_load_2(&reply_buffer_T[global_buf_slot]);
   // update the trip count to signal any waiting threads they can go
   atomic_add((unsigned int *)&tx_element_request_trip_counts[global_buf_slot],
              1u);

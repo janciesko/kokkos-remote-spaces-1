@@ -56,9 +56,11 @@ using HostSpace_t = Kokkos::HostSpace;
 
 using RemoteTraits = Kokkos::RemoteSpaces_MemoryTraitsFlags;
 
+using size_type = int64_t;
+
 // This unit test covers our use-case in CGSOLVE
 // We do not test for puts as we do not have that capability in RACERlib yet.
-template <class Data_t> void test_cached_view1D(int dim0) {
+template <class Data_t> void test_cached_view1D(const size_type dim0) {
   int myRank;
   int numRanks;
   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -67,11 +69,11 @@ template <class Data_t> void test_cached_view1D(int dim0) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   using ViewHost_1D_t =
-      Kokkos::View<Data_t *, Kokkos::LayoutRight, HostSpace_t>;
+      Kokkos::View<Data_t *, Kokkos::LayoutLeft, HostSpace_t>;
   using ViewDevice_1D_t =
-      Kokkos::View<Data_t *, Kokkos::LayoutRight, DeviceSpace_t>;                   
+      Kokkos::View<Data_t *, Kokkos::LayoutLeft, DeviceSpace_t>;                   
   using ViewRemote_1D_t =
-      Kokkos::View<Data_t *, Kokkos::GlobalLayoutRight, RemoteSpace_t,
+      Kokkos::View<Data_t *, Kokkos::GlobalLayoutLeft, RemoteSpace_t,
                    Kokkos::MemoryTraits<RemoteTraits::Cached>>;
 
   ViewRemote_1D_t v_r = ViewRemote_1D_t("RemoteView", dim0);
@@ -81,24 +83,23 @@ template <class Data_t> void test_cached_view1D(int dim0) {
   ViewDevice_1D_t v_d_out_3 = ViewDevice_1D_t("DataView", v_r.extent(0));
   ViewHost_1D_t v_h   = ViewHost_1D_t("HostView", v_r.extent(0));
 
-  int num_teams = 3;
+  int num_teams = 100;
   int num_teams_adjusted = num_teams - 2;
-  int team_size = 4;
+  int team_size = 128;
   int thread_vector_length = 1;
   int next_rank = (myRank + 1) % numRanks;
 
-  // Uniformly distributed as per documentation. 
   // Note: Adding dim0 mod numRanks to the last rank would be an error (segfault)
   // Note: if dim0 < numRanks, the kernels will perform 0 work
-  int size_per_rank = dim0 / numRanks;
-  int size_per_team = size_per_rank / num_teams_adjusted;
-  int size_per_team_mod = size_per_rank % num_teams_adjusted;
+  size_type size_per_rank = dim0 / numRanks;
+  size_type size_per_team = size_per_rank / num_teams_adjusted;
+  size_type size_per_team_mod = size_per_rank % num_teams_adjusted;
      
-  auto policy = Kokkos::TeamPolicy<>
+  auto policy = Kokkos::TeamPolicy<IndexType<size_type>>
        (num_teams, team_size, thread_vector_length);
   using team_t = Kokkos::TeamPolicy<>::member_type;
 
- Kokkos::parallel_for("Init", size_per_rank, KOKKOS_LAMBDA(const int i){
+ Kokkos::parallel_for("Init", size_per_rank, KOKKOS_LAMBDA(const size_type i){
    v_d(i) = myRank * size_per_rank + i;
   });
 
@@ -113,35 +114,35 @@ template <class Data_t> void test_cached_view1D(int dim0) {
                                    size_per_team + size_per_team_mod : size_per_team;
 
     Kokkos::parallel_for(Kokkos::TeamThreadRange(team,block),
-        [&] (const int i) {
-        int index = next_rank * size_per_rank + start + i;     
-       // printf("Index:%i\n", index);   
+        [&] (const size_type i) {
+        size_type index = next_rank * size_per_rank + start + i;        
         v_d_out_1(start+i) = v_r(index);    
-        v_d_out_2(start+i) = v_r(index);    
-        v_d_out_3(start+i) = v_r(index);    
+       /* v_d_out_2(start+i) = v_r(index);    
+        v_d_out_3(start+i) = v_r(index);    */
+
+        //assert()
       });
     }, v_r);
 
   Kokkos::fence(); 
-  RemoteSpace_t().fence();
-
+  
   Kokkos::deep_copy(v_h, v_d_out_1);
-  for (int i = 0; i < size_per_rank; ++i)
+  for (size_type i = 0; i < size_per_rank; ++i)
     ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);
-
+/*
   Kokkos::deep_copy(v_h, v_d_out_2);
-  for (int i = 0; i <size_per_rank; ++i)
+  for (size_type i = 0; i <size_per_rank; ++i)
     ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);
 
   Kokkos::deep_copy(v_h, v_d_out_3);
-  for (int i = 0; i < size_per_rank; ++i)
-    ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);
+  for (size_type i = 0; i < size_per_rank; ++i)
+    ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);*/
 }
 
 TEST(TEST_CATEGORY, test_cached_view) {
   // 1D
-  test_cached_view1D<double>(87654321); //~700 MB
-  //Do not repeat tests here - the ipc mem alloc might fail (to be fixed)
+  test_cached_view1D<double>((size_type)10); //~760 MB
+  //Do not repeat tests here - the ipc mem alloc might fail (sto be fixed)
 }
 
 #endif /* TEST_CACHED_VIEW_HPP */

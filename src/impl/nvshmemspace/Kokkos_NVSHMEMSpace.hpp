@@ -188,6 +188,30 @@ struct MemorySpaceAccess<Kokkos::CudaSpace,
 } // namespace Impl
 } // namespace Kokkos
 
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2(T * ptr, const T val)
+{
+  return Kokkos::atomic_fetch_add(ptr, val);
+}
+
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2(T * ptr)
+{
+  return Kokkos::atomic_fetch_add(ptr, 0);
+}
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+void volatile_store_2(T * ptr, const T val)
+{
+  Kokkos::atomic_fetch_add(ptr, val);
+}
+
+
 #include <Kokkos_RemoteSpaces_DeepCopy.hpp>
 #include <Kokkos_RemoteSpaces_LocalDeepCopy.hpp>
 #include <Kokkos_RemoteSpaces_Options.hpp>

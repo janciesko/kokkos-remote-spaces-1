@@ -80,7 +80,7 @@ __device__ void pack_response_kernel(T *local_values,
     uint64_t trip_number = sgw->rx_block_request_ctr / queue_size;
 
     if (my_thread == 0) {
-      request = volatile_load(&sgw->rx_block_request_cmd_queue[idx]);
+      request = volatile_load_2(&sgw->rx_block_request_cmd_queue[idx]);
     }
 
     __syncthreads();
@@ -101,7 +101,7 @@ __device__ void pack_response_kernel(T *local_values,
         if (my_index < num_requests) {
           // This needs to be volatile to force visibility from the IB send
           uint32_t offset =
-              GET_ELEMENT_OFFSET(volatile_load(&offsets[my_index]));
+              GET_ELEMENT_OFFSET(volatile_load_2(&offsets[my_index]));
           reply_tx_buffer_T[my_index] = local_values[offset];
         }
         num_packed += total_threads;
@@ -115,12 +115,12 @@ __device__ void pack_response_kernel(T *local_values,
       __threadfence_system();
 
       if (my_thread == 0) {
-        volatile_store(&sgw->tx_block_reply_cmd_queue[idx], request);
+        volatile_store_2(&sgw->tx_block_reply_cmd_queue[idx], request);
       }
     }
 
     if (my_thread == 0) {
-      completion = volatile_load(completion_flag);
+      completion = volatile_load_2(completion_flag);
     }
     __syncthreads();
   } // While loop
@@ -129,7 +129,7 @@ __device__ void pack_response_kernel(T *local_values,
 
   if (my_thread == 0) {
     
-    volatile_store(completion_flag, 0u);
+    volatile_store_2(completion_flag, 0u);
   }
 }
 
@@ -161,9 +161,9 @@ __device__ void aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw,
       if (my_thread == 0) {
         uint64_t last_cleared_on_device = sgw->ack_ctrs_d[pe];
         if (head > last_cleared_on_device) {
-          uint64_t last_cleared_on_host = volatile_load(&sgw->ack_ctrs_h[pe]);
+          uint64_t last_cleared_on_host = volatile_load_2_host(&sgw->ack_ctrs_h[pe]);
           if (last_cleared_on_device < last_cleared_on_host) {
-            volatile_store(&sgw->ack_ctrs_d[pe], last_cleared_on_host);
+            volatile_store_2(&sgw->ack_ctrs_d[pe], last_cleared_on_host);
           }
         }
         uint64_t max_index =
@@ -189,10 +189,10 @@ __device__ void aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw,
             uint32_t ready_flag = MAKE_READY_FLAG(my_trip_number);
             uint32_t req_slot = my_idx + pe * queue_size;
             uint32_t next_request =
-                volatile_load(&sgw->tx_element_request_queue[req_slot]);
+                volatile_load_2(&sgw->tx_element_request_queue[req_slot]);
             while (GET_BLOCK_FLAG(next_request) != ready_flag) {
               next_request =
-                  volatile_load(&sgw->tx_element_request_queue[req_slot]);
+                  volatile_load_2(&sgw->tx_element_request_queue[req_slot]);
             }
             // This looks stupid, but is necessary to make visible to peer
             // devices
@@ -211,13 +211,13 @@ __device__ void aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw,
           uint64_t trip_number = tail_idx / queue_size;
           uint64_t request =
               MAKE_BLOCK_GET_REQUEST(total_requests, pe, trip_number);
-          volatile_store(&sgw->tx_block_request_cmd_queue[queue_idx], request);
+          volatile_store_2(&sgw->tx_block_request_cmd_queue[queue_idx], request);
         }
         __syncthreads();
       }
     }
     if (my_thread == 0) {
-      completion = volatile_load(sgw->request_done_flag);
+      completion = volatile_load_2(sgw->request_done_flag);
     }
 
     __syncthreads();
@@ -227,8 +227,8 @@ __device__ void aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw,
   __syncthreads();
   
   if (my_thread == 0) {
-    volatile_store(sgw->request_done_flag, 0u);
-    volatile_store(sgw->response_done_flag, 1u);
+    volatile_store_2(sgw->request_done_flag, 0u);
+    volatile_store_2(sgw->response_done_flag, 1u);
   }
 }
 
@@ -270,9 +270,9 @@ aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw, Team &&team,
         total_requests = 0;
         uint64_t last_cleared_on_device = sgw->ack_ctrs_d[pe];
         if (head > last_cleared_on_device) {
-          uint64_t last_cleared_on_host = volatile_load(&sgw->ack_ctrs_h[pe]);
+          uint64_t last_cleared_on_host = volatile_load_2(&sgw->ack_ctrs_h[pe]);
           if (last_cleared_on_device < last_cleared_on_host) {
-            volatile_store(&sgw->ack_ctrs_d[pe], last_cleared_on_host);
+            volatile_store_2(&sgw->ack_ctrs_d[pe], last_cleared_on_host);
           }
         }
         uint64_t max_index =
@@ -308,9 +308,9 @@ aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw, Team &&team,
                     uint64_t ready_flag = MAKE_READY_FLAG(my_trip_number);
                     uint64_t req_slot = my_idx + pe * queue_size;
                     uint32_t next_request =
-                        volatile_load(&sgw->tx_element_request_queue[req_slot]);
+                        volatile_load_2(&sgw->tx_element_request_queue[req_slot]);
                     while (GET_BLOCK_FLAG(next_request) != ready_flag) {
-                      next_request = volatile_load(
+                      next_request = volatile_load_2(
                           &sgw->tx_element_request_queue[req_slot]);
                     }
                     // This looks stupid, but is necessary to make visible to
@@ -328,22 +328,22 @@ aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw, Team &&team,
           uint64_t trip_number = tail_idx / queue_size;
           uint64_t request =
               MAKE_BLOCK_GET_REQUEST(total_requests, pe, trip_number);
-          volatile_store(&sgw->tx_block_request_cmd_queue[queue_idx], request);
+          volatile_store_2(&sgw->tx_block_request_cmd_queue[queue_idx], request);
         });
         team.team_barrier();
       }
     }
 
     Kokkos::single(Kokkos::PerTeam(team), [&]() {
-      completion = volatile_load(sgw->request_done_flag);
+      completion = volatile_load_2(sgw->request_done_flag);
     });
     team.team_barrier();
   }
   team.team_barrier();
 
   Kokkos::single(Kokkos::PerTeam(team), [&]() {
-    volatile_store(sgw->request_done_flag, 0u);
-    volatile_store(sgw->response_done_flag, 1u);
+    volatile_store_2(sgw->request_done_flag, 0u);
+    volatile_store_2(sgw->response_done_flag, 1u);
   });
 }
 
@@ -361,7 +361,7 @@ pack_response_kernel(T *local_values, RdmaScatterGatherWorker<T> *sgw,
     uint64_t idx = sgw->rx_block_request_ctr % queue_size;
     uint64_t trip_number = sgw->rx_block_request_ctr / queue_size;
     Kokkos::single(Kokkos::PerTeam(team), [&]() {
-      request = volatile_load(&sgw->rx_block_request_cmd_queue[idx]);
+      request = volatile_load_2(&sgw->rx_block_request_cmd_queue[idx]);
     });
     team.team_barrier();
     if (GET_BLOCK_FLAG(request) == MAKE_READY_FLAG(trip_number)) {
@@ -389,7 +389,7 @@ pack_response_kernel(T *local_values, RdmaScatterGatherWorker<T> *sgw,
                 // This needs to be volatile to force
                 // visibility from the IB send
                 uint32_t offset = GET_ELEMENT_OFFSET(
-                    volatile_load(&offsets[my_index]));
+                    volatile_load_2(&offsets[my_index]));
                 reply_tx_buffer_T[my_index] =
                     local_values[offset];
               });
@@ -401,17 +401,17 @@ pack_response_kernel(T *local_values, RdmaScatterGatherWorker<T> *sgw,
 
       KOKKOS_REMOTE_THREADFENCE_SYSTEM();
       Kokkos::single(Kokkos::PerTeam(team), [&]() {
-        volatile_store(&sgw->tx_block_reply_cmd_queue[idx], request);
+        volatile_store_2(&sgw->tx_block_reply_cmd_queue[idx], request);
       });
     }
     Kokkos::single(Kokkos::PerTeam(team),
-                   [&]() { completion = volatile_load(completion_flag); });
+                   [&]() { completion = volatile_load_2(completion_flag); });
     team.team_barrier();
   }
   team.team_barrier();
 
   Kokkos::single(Kokkos::PerTeam(team),
-                 [&]() { volatile_store(completion_flag, 0u); });
+                 [&]() { volatile_store_2(completion_flag, 0u); });
 }
 
 #endif // RAW_CUDA

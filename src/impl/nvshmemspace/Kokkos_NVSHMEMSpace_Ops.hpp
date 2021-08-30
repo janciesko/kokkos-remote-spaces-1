@@ -920,7 +920,7 @@ struct CachedDataElement<
       void *shm_ptr = sgw->direct_ptrs[pe];
       if (shm_ptr) {
         T *t = (T *)shm_ptr;
-        return volatile_load(&t[offset]);
+        return volatile_load_2(&t[offset]);
       }
       return sgw->request(pe, offset);
     } else {

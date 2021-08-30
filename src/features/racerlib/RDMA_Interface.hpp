@@ -77,22 +77,47 @@ aggregate_requests_kernel(RdmaScatterGatherWorker<T> *sgw, Team &&team,
 #endif // RAW_CUDA
 
 template <class Policy, class Lambda, class RemoteView> struct Worker {
+  Kokkos::View<int> counter;
+
   KOKKOS_FUNCTION void
   operator()(const typename Policy::member_type &team) const {
     RdmaScatterGatherWorker<double> *sgw = m_view(0).sgw;
     if (team.league_rank() == 0) {
+
+       Kokkos::single(
+          Kokkos::PerTeam(team), [=](){
+            Kokkos::atomic_add(counter.data(),1);
+          });
+
+      
+
       debug_2("Starting kernel 2 (aggregate_requests_kernel)\n");
       aggregate_requests_kernel(sgw, team, team.league_size() - 2);
     } else if (team.league_rank() == 1) {
       debug_2("Starting kernel 1 (pack_response_kernel)\n");
+
+             Kokkos::single(
+          Kokkos::PerTeam(team), [=]() {
+            Kokkos::atomic_add(counter.data(),1);
+          });
+
       pack_response_kernel(m_view(0).ptr, sgw, sgw->response_done_flag, team, false);
     } else {
+      int tmp = 100000;
+      while(Kokkos::atomic_fetch_add(counter.data(),0) < 2
+        && tmp > 0)
+
+      {
+        tmp--;
+        if(tmp == 0) Kokkos::abort("ABORTING");
+      }
+
       debug_2("Starting kernel 3 (user)\n");
       auto new_team = team.shrink_league(2);
       m_lambda(new_team);
       team.team_barrier();
       Kokkos::single(
-          Kokkos::PerTeam(team), KOKKOS_LAMBDA() {
+          Kokkos::PerTeam(team), [=]() {
            debug_2("User kernel 3 done\n");
             atomic_fetch_add(sgw->request_done_flag, 1);
           });
@@ -101,7 +126,10 @@ template <class Policy, class Lambda, class RemoteView> struct Worker {
 
   template <class L, class R>
   Worker(L &&lambda, R &&view)
-      : m_lambda(std::forward<L>(lambda)), m_view(std::forward<R>(view)) {}
+      : m_lambda(std::forward<L>(lambda)), m_view(std::forward<R>(view)) {
+
+        counter = Kokkos::View<int>("counter");
+      }
 
 private:
   Lambda m_lambda;
@@ -151,9 +179,10 @@ void remote_parallel_for(const std::string &name, Policy &&policy,
   Worker<PolicyType, LambdaType, RemoteView> worker(
       std::forward<Lambda>(lambda), view);
 
+
   // *** Launch kernel triplet ***
   debug_2("Launch workers\n");
-  Kokkos::parallel_for(name, worker_policy, worker);  
+  Kokkos::parallel_for(name, worker_policy, worker);   
 
   exec_space().fence();  //CudaDeviceSync
   debug_2("Workers finished\n");
@@ -162,7 +191,7 @@ void remote_parallel_for(const std::string &name, Policy &&policy,
       Kokkos::TeamPolicy<>(1, policy.team_size() * vector_length);
 
   Respond_worker<PolicyType, RemoteView> respond_worker(view);
-
+  
   // *** Launch final respond_worker ***
   Kokkos::parallel_for("respond", respond_policy, respond_worker);
   
