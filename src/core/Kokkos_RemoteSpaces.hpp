@@ -48,14 +48,25 @@
 namespace Kokkos {
 namespace Experimental {
 enum RemoteSpaces_MemoryAllocationMode : int { Symmetric, Cached };
-}
+} // namespace Experimental
 } // namespace Kokkos
+
+
+#ifdef KOKKOS_ENABLE_CUDARDMASPACE
+namespace Kokkos {
+namespace Experimental {
+class CudaRDMASpace;
+} // namespace Experimental
+} // namespace Kokkos
+#include <RACERlib_Interface.hpp>
+#include <Kokkos_CudaRDMASpace.hpp>
+#endif
 
 #ifdef KOKKOS_ENABLE_SHMEMSPACE
 namespace Kokkos {
 namespace Experimental {
 class SHMEMSpace;
-}
+} // namespace Experimental
 } // namespace Kokkos
 #include <Kokkos_SHMEMSpace.hpp>
 #endif
@@ -64,7 +75,7 @@ class SHMEMSpace;
 namespace Kokkos {
 namespace Experimental {
 class NVSHMEMSpace;
-}
+} // namespace Experimental
 } // namespace Kokkos
 #include <Kokkos_NVSHMEMSpace.hpp>
 #endif
@@ -73,7 +84,7 @@ class NVSHMEMSpace;
 namespace Kokkos {
 namespace Experimental {
 class MPISpace;
-}
+} // namespace Experimental
 } // namespace Kokkos
 #include <Kokkos_MPISpace.hpp>
 #endif
@@ -90,12 +101,16 @@ typedef SHMEMSpace DefaultRemoteMemorySpace;
 #ifdef KOKKOS_ENABLE_MPISPACE
 typedef MPISpace DefaultRemoteMemorySpace;
 #else
+#ifdef KOKKOS_ENABLE_CUDARDMASPACE
+typedef CudaRDMASpace DefaultRemoteMemorySpace;
+#else
 error "At least one remote space must be selected."
 #endif
 #endif
 #endif
-} // namespace Experimental
+#endif
 
+} // namespace Experimental=
 } // namespace Kokkos
 
 #endif // KOKKOS_RESMOTESPACES_HPP

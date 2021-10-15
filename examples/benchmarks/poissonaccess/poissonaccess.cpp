@@ -61,12 +61,12 @@ constexpr uint64_t MISS_INDEX = std::numeric_limits<uint64_t>::max();
 int main(int argc, char** argv)
 {
   MPI_Init(&argc,&argv);
-  MPI_Comm mpi_comm;
 
 #ifdef KOKKOS_ENABLE_SHMEMSPACE
   shmem_init();
 #endif
 #ifdef KOKKOS_ENABLE_NVSHMEMSPACE
+  MPI_Comm mpi_comm;
   nvshmemx_init_attr_t attr;
   mpi_comm = MPI_COMM_WORLD;
   attr.mpi_comm = &mpi_comm;

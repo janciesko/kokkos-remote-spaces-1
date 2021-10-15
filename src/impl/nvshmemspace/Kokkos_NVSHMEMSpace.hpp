@@ -42,8 +42,8 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_NVSHMEMSPACE_HPP
-#define KOKKOS_NVSHMEMSPACE_HPP
+#ifndef KOKKOS_REMOTESPACES_NVSHMEMSPACE_HPP
+#define KOKKOS_REMOTESPACES_NVSHMEMSPACE_HPP
 
 #include <cstring>
 #include <iosfwd>
@@ -56,7 +56,6 @@
 #include <mpi.h>
 #include <nvshmem.h>
 #include <nvshmemx.h>
-/*--------------------------------------------------------------------------*/
 
 namespace Kokkos {
 namespace Experimental {
@@ -197,4 +196,4 @@ struct MemorySpaceAccess<Kokkos::CudaSpace,
 #include <Kokkos_NVSHMEMSpace_DataHandle.hpp>
 #include <Kokkos_NVSHMEMSpace_ViewTraits.hpp>
 
-#endif // #define KOKKOS_NVSHMEMSPACE_HPP
+#endif // #define KOKKOS_REMOTESPACES_NVSHMEMSPACE_HPP

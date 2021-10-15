@@ -42,8 +42,8 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_REMOTESPACES_SHMEMSPACE_HPP
-#define KOKKOS_REMOTESPACES_SHMEMSPACE_HPP
+#ifndef KOKKOS_REMOTESPACES_CUDARDMASpace_HPP
+#define KOKKOS_REMOTESPACES_CUDARDMASpace_HPP
 
 #include <cstring>
 #include <iosfwd>
@@ -54,14 +54,13 @@
 
 #include <Kokkos_RemoteSpaces.hpp>
 #include <mpi.h>
-#include <shmem.h>
 
 namespace Kokkos {
 namespace Experimental {
 
-struct RemoteSpaceSpecializeTag {};
+class RemoteSpaceSpecializeTag {};
 
-class SHMEMSpace {
+class CudaRDMASpace {
 public:
 
 #if defined(KOKKOS_ENABLE_DEFAULT_DEVICE_TYPE_OPENMP)
@@ -76,21 +75,23 @@ public:
   using execution_space = Kokkos::Serial;
 #else
 #error                                                                         \
-    "At least one of the following host execution spaces must be defined: Kokkos::OpenMP, Kokkos::Threads, Kokkos::Qthreads, or Kokkos::Serial.  You might be seeing this message if you disabled the Kokkos::Serial device explicitly using the Kokkos_ENABLE_Serial:BOOL=OFF CMake option, but did not enable any of the other host execution space devices."
+    "At least one of the following host execution spaces must be defined: Kokkos::OpenMP, Kokkos::Threads, Kokkos::Qthreads, or Kokkos::Serial.  \
+        You might be seeing this message if you disabled the Kokkos::Serial device explicitly using the Kokkos_ENABLE_Serial:BOOL=OFF \
+        CMake option, but did not enable any of the other host execution space devices."
 #endif
 
-  using memory_space = SHMEMSpace;
+  using memory_space = CudaRDMASpace;
   using device_type = Kokkos::Device<execution_space, memory_space>;
   using size_type = size_t;
 
-  SHMEMSpace();
-  SHMEMSpace(SHMEMSpace &&rhs) = default;
-  SHMEMSpace(const SHMEMSpace &rhs) = default;
-  SHMEMSpace &operator=(SHMEMSpace &&) = default;
-  SHMEMSpace &operator=(const SHMEMSpace &) = default;
-  ~SHMEMSpace() = default;
+  CudaRDMASpace();
+  CudaRDMASpace(CudaRDMASpace &&rhs) = default;
+  CudaRDMASpace(const CudaRDMASpace &rhs) = default;
+  CudaRDMASpace &operator=(CudaRDMASpace &&) = default;
+  CudaRDMASpace &operator=(const CudaRDMASpace &) = default;
+  ~CudaRDMASpace() = default;
 
-  explicit SHMEMSpace(const MPI_Comm &);
+  explicit CudaRDMASpace(const MPI_Comm &);
 
   void *allocate(const size_t arg_alloc_size) const;
 
@@ -113,14 +114,12 @@ public:
   void impl_set_extent(int64_t N);
 
 private:
-  static constexpr const char *m_name = "SHMEM";
+  static constexpr const char *m_name = "CudaRDMA";
   friend class Kokkos::Impl::SharedAllocationRecord<
-      Kokkos::Experimental::SHMEMSpace, void>;
+      Kokkos::Experimental::CudaRDMASpace, void>;
 };
 
-KOKKOS_FUNCTION
 size_t get_num_pes();
-KOKKOS_FUNCTION
 size_t get_my_pe();
 KOKKOS_FUNCTION
 size_t get_block(size_t size);
@@ -136,41 +135,70 @@ namespace Kokkos {
 namespace Impl {
 
 template <>
-struct DeepCopy<HostSpace, Kokkos::Experimental::SHMEMSpace>{
+struct DeepCopy<HostSpace, Kokkos::Experimental::CudaRDMASpace>{
   DeepCopy(void* dst, const void* src, size_t);
 };
 
 template <>
-struct DeepCopy<Kokkos::Experimental::SHMEMSpace, HostSpace>{
-  DeepCopy(void* dst, const void* src, size_t);
-};
-
-template <>
-struct DeepCopy<Kokkos::Experimental::SHMEMSpace, Kokkos::Experimental::SHMEMSpace>{
+struct DeepCopy<Kokkos::Experimental::CudaRDMASpace, HostSpace>{
   DeepCopy(void* dst, const void* src, size_t);
 };
 
 template <class ExecutionSpace>
-struct DeepCopy<Kokkos::Experimental::SHMEMSpace, Kokkos::Experimental::SHMEMSpace,
+struct DeepCopy<Kokkos::Experimental::CudaRDMASpace, Kokkos::Experimental::CudaRDMASpace,
                 ExecutionSpace> {
   DeepCopy(void *dst, const void *src, size_t n);
   DeepCopy(const ExecutionSpace &exec, void *dst, const void *src, size_t n);
 };
 
+
 template <>
-struct MemorySpaceAccess<Kokkos::Experimental::SHMEMSpace,
-                         Kokkos::Experimental::SHMEMSpace> {
+struct MemorySpaceAccess<Kokkos::Experimental::CudaRDMASpace,
+                         Kokkos::Experimental::CudaRDMASpace> {
   enum { assignable = true };
   enum { accessible = true };
   enum { deepcopy = false };
 };
 
 template <>
-struct MemorySpaceAccess<Kokkos::HostSpace, Kokkos::Experimental::SHMEMSpace> {
+struct MemorySpaceAccess<Kokkos::HostSpace,
+                         Kokkos::Experimental::CudaRDMASpace> {
+  enum { assignable = false };
+  enum { accessible = false };
+  enum { deepcopy = true };
+};
+
+template <>
+struct MemorySpaceAccess<Kokkos::CudaSpace,
+                         Kokkos::Experimental::CudaRDMASpace> {
   enum { assignable = false };
   enum { accessible = true };
   enum { deepcopy = true };
 };
+
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2(T * ptr, const T val)
+{
+  return Kokkos::atomic_fetch_add(ptr, val);
+}
+
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+T volatile_load_2(T * ptr)
+{
+  return Kokkos::atomic_fetch_add(ptr, 0);
+}
+
+template<class T>
+KOKKOS_INLINE_FUNCTION
+void volatile_store_2(T * ptr, const T val)
+{
+  Kokkos::atomic_fetch_add(ptr, val);
+}
+
 
 } // namespace Impl
 } // namespace Kokkos
@@ -181,9 +209,9 @@ struct MemorySpaceAccess<Kokkos::HostSpace, Kokkos::Experimental::SHMEMSpace> {
 #include <Kokkos_RemoteSpaces_Options.hpp>
 #include <Kokkos_RemoteSpaces_ViewOffset.hpp>
 #include <Kokkos_RemoteSpaces_ViewMapping.hpp>
-#include <Kokkos_SHMEMSpace_Ops.hpp>
-#include <Kokkos_SHMEMSpace_AllocationRecord.hpp>
-#include <Kokkos_SHMEMSpace_DataHandle.hpp>
-#include <Kokkos_SHMEMSpace_ViewTraits.hpp>
+#include <Kokkos_CudaRDMASpace_Ops.hpp>
+#include <Kokkos_CudaRDMASpace_AllocationRecord.hpp>
+#include <Kokkos_CudaRDMASpace_DataHandle.hpp>
+#include <Kokkos_CudaRDMASpace_ViewTraits.hpp>
 
-#endif // #define KOKKOS_REMOTESPACES_SHMEMSPACE_HPP
+#endif // #define KOKKOS_REMOTESPACES_CUDARDMASpace_HPP

@@ -444,6 +444,10 @@ typedef Kokkos::Experimental::SHMEMSpace DefaultRemoteMemorySpace;
 #else
 #ifdef KOKKOS_ENABLE_MPISPACE
 typedef Kokkos::Experimental::MPISpace DefaultRemoteMemorySpace;
+#else
+#ifdef KOKKOS_ENABLE_CUDARDMASPACE
+typedef Kokkos::Experimental::CudaRDMASpace DefaultRemoteMemorySpace;
+#endif
 #endif
 #endif
 #endif

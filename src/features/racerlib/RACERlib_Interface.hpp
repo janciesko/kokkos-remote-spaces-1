@@ -42,30 +42,63 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_REMOTESPACES_OPTIONS_HPP
-#define KOKKOS_REMOTESPACES_OPTIONS_HPP
+#ifndef RACERLIB_INTERFACE
+#define RACERLIB_INTERFACE
 
 #include <Kokkos_Core.hpp>
-#include <cstdint>
+#include <RDMA_Engine.hpp>
+#include <RDMA_Helpers.hpp>
+#include <RDMA_Interface.hpp>
+#include <RDMA_Transport.hpp>
 
 namespace Kokkos {
+namespace Experimental {
+namespace RACERlib {
 
-enum RemoteSpaces_MemoryTraitsFlags {
-  Dim0IsPE = 0x128,
-  Cached = 0x256,
+#define RACERLIB_SUCCESS 1
+
+template <typename T> struct Engine;
+
+// Todo: template this on Feature for generic Engine feature support
+template <typename T> struct Engine {
+
+  void put(void *target, T &value, int PE, int offset, MPI_Comm comm_id);
+  T get(void *target, int PE, int offset, MPI_Comm comm_id);
+
+  // Call this at View memory allocation (allocation record)
+  int start(void *target, MPI_Comm comm_id);
+  // Call this at View memory deallocation (~allocation record);
+  int stop(void *target, MPI_Comm comm_id);
+  // Call this on fence. We need to make sure that at sychronization points,
+  // caches are empty
+  int flush(void *allocation, MPI_Comm comm_id);
+  // Call this on Kokkos initialize.
+  int init(
+      void *target,
+      MPI_Comm comm_id); // set communicator reference, return RACERLIB_STATUS
+  // Call this on kokkos finalize
+  int finalize(); // finalize communicator instance, return RECERLIB_STATUS
+
+  RdmaScatterGatherEngine *sge;
+  RdmaScatterGatherWorker<T> *sgw;
+
+  std::set<RdmaScatterGatherEngine *> sges;
+
+  Engine();
+  Engine(void *target, MPI_Comm comm_id);
+  void allocate_host_device_component(void *p, MPI_Comm comm);
+  void allocate_host_host_component();
+  // Dealloc all for now.
+  void deallocate_device_component();
+  void deallocate_host_component();
+  RdmaScatterGatherWorker<T> *get_worker() const;
+  RdmaScatterGatherEngine *get_engine() const;
+  ~Engine();
+  void fence();
 };
 
-template <typename T> struct RemoteSpaces_MemoryTraits;
-
-template <unsigned T> struct RemoteSpaces_MemoryTraits<MemoryTraits<T>> {
-  enum : bool {
-    dim0_is_pe = (unsigned(0) != (T & unsigned(Dim0IsPE)))
-  };
-  enum : bool {
-    is_cached = (unsigned(0) != (T & unsigned(Cached)))
-  };
-  enum : int { state = T };
-};
+} // namespace RACERlib
+} // namespace Experimental
 } // namespace Kokkos
 
-#endif // KOKKOS_REMOTESPACES_OPTIONS_HPP
+#endif // RACERLIB_INTERFACE

@@ -42,30 +42,49 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_REMOTESPACES_OPTIONS_HPP
-#define KOKKOS_REMOTESPACES_OPTIONS_HPP
+#ifndef RACERLIB_RDMA_TRANSPORT
+#define RACERLIB_RDMA_TRANSPORT
 
 #include <Kokkos_Core.hpp>
-#include <cstdint>
+#include <RDMA_Helpers.hpp>
+
+#include <infiniband/verbs.h>
+#include <mpi.h>
+
+#include <vector>
+#include <iostream>
 
 namespace Kokkos {
+namespace Experimental {
+namespace RACERlib {
 
-enum RemoteSpaces_MemoryTraitsFlags {
-  Dim0IsPE = 0x128,
-  Cached = 0x256,
+void rdma_ibv_init();
+void rdma_ibv_finalize();
+
+struct Transport {
+
+struct BootstrapPort {
+  uint16_t lid;
+  uint8_t port;
+  uint32_t qp_num;
 };
 
-template <typename T> struct RemoteSpaces_MemoryTraits;
+  int num_ranks;
+  int my_rank;
+  ibv_context* ctx;
+  ibv_cq* cq;
+  ibv_qp** qps;
+  ibv_device* dev;
+  ibv_pd* pd;
+  ibv_srq* srq;
 
-template <unsigned T> struct RemoteSpaces_MemoryTraits<MemoryTraits<T>> {
-  enum : bool {
-    dim0_is_pe = (unsigned(0) != (T & unsigned(Dim0IsPE)))
-  };
-  enum : bool {
-    is_cached = (unsigned(0) != (T & unsigned(Cached)))
-  };
-  enum : int { state = T };
+  Transport(MPI_Comm comm);
+  ~Transport();
 };
+
+} // namespace RACERlib
+} // namespace Experimental
 } // namespace Kokkos
 
-#endif // KOKKOS_REMOTESPACES_OPTIONS_HPP
+#endif // RACERLIB_RDMA_TRANSPORT
+

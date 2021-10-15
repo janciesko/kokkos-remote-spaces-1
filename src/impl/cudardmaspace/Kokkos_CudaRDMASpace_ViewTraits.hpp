@@ -42,30 +42,41 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_REMOTESPACES_OPTIONS_HPP
-#define KOKKOS_REMOTESPACES_OPTIONS_HPP
-
-#include <Kokkos_Core.hpp>
-#include <cstdint>
+#ifndef KOKKOS_REMOTESPACES_CUDARDMA_VIEWTRAITS_HPP
+#define KOKKOS_REMOTESPACES_CUDARDMA_VIEWTRAITS_HPP
 
 namespace Kokkos {
+/*
+ * ViewTraits class evaluated during View specialization
+ */
 
-enum RemoteSpaces_MemoryTraitsFlags {
-  Dim0IsPE = 0x128,
-  Cached = 0x256,
+template <class... Properties>
+struct ViewTraits<void, Kokkos::Experimental::CudaRDMASpace, Properties...> {
+
+  static_assert(
+      std::is_same<typename ViewTraits<void, Properties...>::execution_space,
+                   void>::value &&
+          std::is_same<typename ViewTraits<void, Properties...>::memory_space,
+                       void>::value &&
+          std::is_same<
+              typename ViewTraits<void, Properties...>::HostMirrorSpace,
+              void>::value &&
+          std::is_same<typename ViewTraits<void, Properties...>::array_layout,
+                       void>::value,
+      "Only one View Execution or Memory Space template argument");
+
+  // Specify layout, keep subsequent space and memory traits arguments
+  using execution_space =
+      typename Kokkos::Experimental::CudaRDMASpace::execution_space;
+  using memory_space =
+      typename Kokkos::Experimental::CudaRDMASpace::memory_space;
+  using HostMirrorSpace = typename Kokkos::Impl::HostMirror<
+      Kokkos::Experimental::CudaRDMASpace>::Space;
+  using array_layout = typename execution_space::array_layout;
+  using specialize = Kokkos::Experimental::RemoteSpaceSpecializeTag;
+  using memory_traits = typename ViewTraits<void, Properties...>::memory_traits;
 };
 
-template <typename T> struct RemoteSpaces_MemoryTraits;
-
-template <unsigned T> struct RemoteSpaces_MemoryTraits<MemoryTraits<T>> {
-  enum : bool {
-    dim0_is_pe = (unsigned(0) != (T & unsigned(Dim0IsPE)))
-  };
-  enum : bool {
-    is_cached = (unsigned(0) != (T & unsigned(Cached)))
-  };
-  enum : int { state = T };
-};
 } // namespace Kokkos
 
-#endif // KOKKOS_REMOTESPACES_OPTIONS_HPP
+#endif // KOKKOS_REMOTESPACES_CUDARDMA_VIEWTRAITS_HPP

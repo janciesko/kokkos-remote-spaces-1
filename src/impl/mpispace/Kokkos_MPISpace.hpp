@@ -42,8 +42,8 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_MPISPACE_HPP
-#define KOKKOS_MPISPACE_HPP
+#ifndef KOKKOS_REMOTESPACES_MPISPACE_HPP
+#define KOKKOS_REMOTESPACES_MPISPACE_HPP
 
 #include <cstring>
 #include <impl/Kokkos_Traits.hpp>
@@ -56,7 +56,6 @@
 #include <Kokkos_RemoteSpaces.hpp>
 #include <mpi.h>
 #include <vector>
-/*--------------------------------------------------------------------------*/
 
 namespace Kokkos {
 namespace Experimental {
@@ -186,4 +185,4 @@ struct MemorySpaceAccess<Kokkos::HostSpace,
 #include <Kokkos_MPISpace_DataHandle.hpp>
 #include <Kokkos_MPISpace_ViewTraits.hpp>
 
-#endif // #define KOKKOS_MPISPACE_HPP
+#endif // #define KOKKOS_REMOTESPACES_MPISPACE_HPP

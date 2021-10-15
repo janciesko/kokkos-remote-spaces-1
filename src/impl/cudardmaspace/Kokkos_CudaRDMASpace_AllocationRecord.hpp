@@ -42,21 +42,20 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_REMOTESPACES_SHMEM_ALLOCREC_HPP
-#define KOKKOS_REMOTESPACES_SHMEM_ALLOCREC_HPP
+#ifndef KOKKOS_REMOTESPACES_CUDARDMA_ALLOCREC_HPP
+#define KOKKOS_REMOTESPACES_CUDARDMA_ALLOCREC_HPP
 
 #include <Kokkos_Core.hpp>
-
-/*--------------------------------------------------------------------------*/
 
 namespace Kokkos {
 namespace Impl {
 
 template <>
-class SharedAllocationRecord<Kokkos::Experimental::SHMEMSpace, void>
+class SharedAllocationRecord<Kokkos::Experimental::CudaRDMASpace, void>
     : public SharedAllocationRecord<void, void> {
 private:
-  friend Kokkos::Experimental::SHMEMSpace;
+  friend Kokkos::Experimental::CudaRDMASpace;
+  Kokkos::Experimental::RACERlib::Engine<double> engine;
 
   typedef SharedAllocationRecord<void, void> RecordBase;
 
@@ -65,28 +64,31 @@ private:
 
   static void deallocate(RecordBase *);
 
-  /**\brief  Root record for tracked allocations from this SHMEMSpace instance
+  /**\brief  Root record for tracked allocations from this CudaRDMASpace instance
    */
   static RecordBase s_root_record;
 
-  const Kokkos::Experimental::SHMEMSpace m_space;
+  const Kokkos::Experimental::CudaRDMASpace m_space;
 
 protected:
   ~SharedAllocationRecord();
   SharedAllocationRecord() = default;
 
   SharedAllocationRecord(
-      const Kokkos::Experimental::SHMEMSpace &arg_space,
+      const Kokkos::Experimental::CudaRDMASpace &arg_space,
       const std::string &arg_label, const size_t arg_alloc_size,
       const RecordBase::function_type arg_dealloc = &deallocate);
 
 public:
   inline std::string get_label() const {
-    return std::string(RecordBase::head()->m_label);
+    SharedAllocationHeader header;
+    Kokkos::Impl::DeepCopy<Kokkos::HostSpace, Kokkos::CudaSpace>(
+        &header, RecordBase::head(), sizeof(SharedAllocationHeader));
+    return std::string(header.m_label);
   }
 
   KOKKOS_INLINE_FUNCTION static SharedAllocationRecord *
-  allocate(const Kokkos::Experimental::SHMEMSpace &arg_space,
+  allocate(const Kokkos::Experimental::CudaRDMASpace &arg_space,
            const std::string &arg_label, const size_t arg_alloc_size) {
 #if defined(KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST)
     return new SharedAllocationRecord(arg_space, arg_label, arg_alloc_size);
@@ -97,7 +99,7 @@ public:
 
   /**\brief  Allocate tracked memory in the space */
   static void *
-  allocate_tracked(const Kokkos::Experimental::SHMEMSpace &arg_space,
+  allocate_tracked(const Kokkos::Experimental::CudaRDMASpace &arg_space,
                    const std::string &arg_label, const size_t arg_alloc_size);
 
   /**\brief  Reallocate tracked memory in the space */
@@ -110,11 +112,16 @@ public:
   static SharedAllocationRecord *get_record(void *arg_alloc_ptr);
 
   static void print_records(std::ostream &,
-                            const Kokkos::Experimental::SHMEMSpace &,
+                            const Kokkos::Experimental::CudaRDMASpace &,
                             bool detail = false);
+
+  int get_my_pe();
+  int get_num_pes();  
+  Kokkos::Experimental::RACERlib::Engine<double> *  RACERlib_get_engine();
+
 };
 
 } // namespace Impl
 } // namespace Kokkos
 
-#endif // KOKKOS_REMOTESPACES_SHMEM_ALLOCREC_HPP
+#endif // KOKKOS_REMOTESPACES_CUDARDMA_ALLOCREC_HPP

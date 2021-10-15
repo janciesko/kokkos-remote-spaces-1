@@ -42,8 +42,8 @@
 //@HEADER
 */
 
-#ifndef KOKKOS_MPI_ALLOCREC_HPP
-#define KOKKOS_MPI_ALLOCREC_HPP
+#ifndef KOKKOS_MPI_REMOTESPACES_ALLOCREC_HPP
+#define KOKKOS_MPI_REMOTESPACES_ALLOCREC_HPP
 
 #include <Kokkos_Core.hpp>
 
@@ -118,4 +118,4 @@ public:
 } // namespace Impl
 } // namespace Kokkos
 
-#endif // KOKKOS_MPI_ALLOCREC_HPP
+#endif // KOKKOS_MPI_REMOTESPACES_ALLOCREC_HPP

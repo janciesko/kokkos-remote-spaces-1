@@ -8,9 +8,11 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/modules)
 
 find_package(Kokkos REQUIRED)
 
-option(Kokkos_ENABLE_NVSHMEMSPACE "Whether to build with NVSHMEM space" OFF)
-option(Kokkos_ENABLE_SHMEMSPACE "Whether to build with SHMEMS space" OFF)
-option(Kokkos_ENABLE_MPISPACE "Whether to build with MPI space" OFF)
+option(Kokkos_ENABLE_CUDARDMASPACE "Whether to build with CudaRDMASpace" OFF)
+option(Kokkos_ENABLE_NVSHMEMSPACE "Whether to build with NVSHMEMSpace" OFF)
+option(Kokkos_ENABLE_SHMEMSPACE "Whether to build with SHMEMSpace" OFF)
+option(Kokkos_ENABLE_MPISPACE "Whether to build with MPISpace" OFF)
+
 option(Kokkos_ENABLE_TESTS "Whether to enable tests" OFF)
 option(Kokkos_ENABLE_DEBUG "Whether to enable debugging output" OFF)
 
@@ -19,9 +21,12 @@ set(PUBLIC_DEPS)
 set(PRIVATE_DEPS)
 
 set(PREFIX_BACKEND_SRC_PATH "src/impl")
+set(CUDARDMASPACE_PATH "${PREFIX_BACKEND_SRC_PATH}/cudardmaspace")
 set(NVSHMEMSPACE_PATH "${PREFIX_BACKEND_SRC_PATH}/nvshmemspace")
 set(SHMEMSPACE_PATH "${PREFIX_BACKEND_SRC_PATH}/shmemspace")
 set(MPISPACE_PATH "${PREFIX_BACKEND_SRC_PATH}/mpispace")
+
+set(RACERLIB_PATH "src/features/racerlib/")
 
 find_package(MPI REQUIRED)
 add_library(MPI INTERFACE)
@@ -56,9 +61,13 @@ if (Kokkos_ENABLE_MPISPACE)
   list(APPEND SOURCE_DIRS ${MPISPACE_PATH})
   list(APPEND PUBLIC_DEPS ${BACKEND_NAME})
 endif()
-if (Kokkos_ENABLE_RACERLIB)
+if (Kokkos_ENABLE_CUDARDMASPACE)
   find_package(IBVERBS REQUIRED)
   list(APPEND PUBLIC_DEPS IBVERBS)
+  set(BACKEND_NAME CUDARDMASPACE)
+  list(APPEND SOURCE_DIRS ${CUDARDMASPACE_PATH})
+  list(APPEND PUBLIC_DEPS ${BACKEND_NAME})
+  message(${SOURCE_DIRS})
 endif()
 
 if (NOT SOURCE_DIRS)
@@ -74,7 +83,8 @@ foreach(DIR ${SOURCE_DIRS})
   list(APPEND HEADERS ${DIR_HDRS})
 endforeach()
 
-if (Kokkos_ENABLE_RACERLIB)
+if (Kokkos_ENABLE_CUDARDMASPACE)
+  # RACERlib is required
   file(GLOB DIR_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/features/racerlib/*.cpp)
   file(GLOB DIR_HDRS ${CMAKE_CURRENT_SOURCE_DIR}/src/features/racerlib/*.hpp)
   list(APPEND SOURCES ${DIR_SRCS})
@@ -90,7 +100,7 @@ foreach(DIR ${SOURCE_DIRS})
   target_compile_definitions(kokkosremote PUBLIC KOKKOS_ENABLE_${BACKEND_NAME})
 endforeach()
 
-if (Kokkos_ENABLE_RACERLIB)
+if (Kokkos_ENABLE_CUDARDMASPACE)
   target_include_directories(kokkosremote PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/features/racerlib>)
   target_compile_definitions(kokkosremote PUBLIC KOKKOS_ENABLE_RACERLIB)
 endif()
@@ -99,7 +109,8 @@ target_include_directories(kokkosremote PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT
 target_include_directories(kokkosremote PUBLIC $<INSTALL_INTERFACE:include>)
 
 if(Kokkos_ENABLE_DEBUG)
- target_compile_definitions(kokkosremote PUBLIC KOKKOS_IBV_DEBUG)
+  # We currently emit debug output in CudaRDMASpace only
+  target_compile_definitions(kokkosremote PUBLIC KOKKOS_IBV_DEBUG)
 endif()
 
 if (PRIVATE_DEPS)
@@ -130,20 +141,6 @@ install(FILES
 install(FILES
   ${HEADERS}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-install(
-  TARGETS kokkosremote ${PUBLIC_DEPS}
-  EXPORT KokkosRemoteTargets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-install(EXPORT 
-  KokkosRemoteTargets 
-  NAMESPACE Kokkos:: 
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KokkosRemote
 )
 
 add_subdirectory(examples)
