@@ -25,5 +25,5 @@ else()
 endif()
 
 add_executable(${NAME} ${TEST_SRCS})
-target_link_libraries(${NAME} PUBLIC Kokkos::kokkosremote)
+target_link_libraries(${NAME} PUBLIC kokkosremote)
 target_link_libraries(${NAME} PUBLIC gtest_main)

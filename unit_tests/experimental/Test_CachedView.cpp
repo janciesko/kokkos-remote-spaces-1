@@ -69,9 +69,9 @@ template <class Data_t> void test_cached_view1D(const size_type dim0) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   using ViewHost_1D_t =
-      Kokkos::View<Data_t *, Kokkos::LayoutLeft, HostSpace_t>;
+      Kokkos::View<Data_t *, HostSpace_t>;
   using ViewDevice_1D_t =
-      Kokkos::View<Data_t *, Kokkos::LayoutLeft, DeviceSpace_t>;                   
+      Kokkos::View<Data_t *, DeviceSpace_t>;                   
   using ViewRemote_1D_t =
       Kokkos::View<Data_t *, RemoteSpace_t,
                    Kokkos::MemoryTraits<RemoteTraits::Cached>>;
@@ -117,10 +117,8 @@ template <class Data_t> void test_cached_view1D(const size_type dim0) {
         [&] (const size_type i) {
         size_type index = next_rank * size_per_rank + start + i;        
         v_d_out_1(start+i) = v_r(index);    
-       /* v_d_out_2(start+i) = v_r(index);    
-        v_d_out_3(start+i) = v_r(index);    */
-
-        //assert()
+        v_d_out_2(start+i) = v_r(index);    
+        v_d_out_3(start+i) = v_r(index);    
       });
     }, v_r);
 
@@ -129,19 +127,19 @@ template <class Data_t> void test_cached_view1D(const size_type dim0) {
   Kokkos::deep_copy(v_h, v_d_out_1);
   for (size_type i = 0; i < size_per_rank; ++i)
     ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);
-/*
+
   Kokkos::deep_copy(v_h, v_d_out_2);
   for (size_type i = 0; i <size_per_rank; ++i)
     ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);
 
   Kokkos::deep_copy(v_h, v_d_out_3);
   for (size_type i = 0; i < size_per_rank; ++i)
-    ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);*/
+    ASSERT_EQ(v_h(i), next_rank * size_per_rank + i);
 }
 
 TEST(TEST_CATEGORY, test_cached_view) {
   // 1D
-  test_cached_view1D<double>((size_type)10);
+  test_cached_view1D<double>((size_type)100000);
   //Do not repeat tests here - the ipc mem alloc might fail (to be fixed)
 }
 

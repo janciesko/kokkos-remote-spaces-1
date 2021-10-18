@@ -52,6 +52,7 @@ namespace Experimental {
 namespace RACERlib{
 
 #ifdef RAW_CUDA
+
 template <typename T, class Team>
 __device__ void pack_response_kernel(T *local_values,
                                      RdmaScatterGatherWorker<T> *sgw,

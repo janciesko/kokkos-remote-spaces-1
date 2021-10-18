@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.12)
 
 project(KokkosRemote
   LANGUAGES CXX 
-  VERSION 0.1.0)
+  VERSION 0.2.0)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/modules)
 
@@ -47,26 +47,22 @@ if (Kokkos_ENABLE_NVSHMEMSPACE)
   find_package(NVSHMEM REQUIRED)
   set(BACKEND_NAME NVSHMEMSPACE)
   list(APPEND SOURCE_DIRS ${NVSHMEMSPACE_PATH})
-  list(APPEND PUBLIC_DEPS ${BACKEND_NAME})
 endif()
 if (Kokkos_ENABLE_SHMEMSPACE)
   find_package(SHMEM REQUIRED)
   set(BACKEND_NAME SHMEMSPACE)
   list(APPEND SOURCE_DIRS ${SHMEMSPACE_PATH})
-  list(APPEND PUBLIC_DEPS ${BACKEND_NAME})
 endif()
 if (Kokkos_ENABLE_MPISPACE)
   add_library(MPISPACE INTERFACE)
   set(BACKEND_NAME MPISPACE)
   list(APPEND SOURCE_DIRS ${MPISPACE_PATH})
-  list(APPEND PUBLIC_DEPS ${BACKEND_NAME})
 endif()
 if (Kokkos_ENABLE_CUDARDMASPACE)
   find_package(IBVERBS REQUIRED)
   list(APPEND PUBLIC_DEPS IBVERBS)
   set(BACKEND_NAME CUDARDMASPACE)
   list(APPEND SOURCE_DIRS ${CUDARDMASPACE_PATH})
-  list(APPEND PUBLIC_DEPS ${BACKEND_NAME})
   message(${SOURCE_DIRS})
 endif()
 
@@ -113,9 +109,9 @@ if(Kokkos_ENABLE_DEBUG)
   target_compile_definitions(kokkosremote PUBLIC KOKKOS_IBV_DEBUG)
 endif()
 
-if (PRIVATE_DEPS)
-  target_link_libraries(kokkosremote PRIVATE ${PRIVATE_DEPS})
-endif()
+#if (PRIVATE_DEPS)
+#  target_link_libraries(kokkosremote PRIVATE ${PRIVATE_DEPS})
+#endif()
 if (PUBLIC_DEPS)
   target_link_libraries(kokkosremote PUBLIC ${PUBLIC_DEPS})
 endif()
@@ -141,6 +137,20 @@ install(FILES
 install(FILES
   ${HEADERS}
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(
+  TARGETS kokkosremote ${PUBLIC_DEPS}
+  EXPORT KokkosRemoteTargets
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(EXPORT 
+  KokkosRemoteTargets 
+  NAMESPACE Kokkos:: 
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KokkosRemote
 )
 
 add_subdirectory(examples)

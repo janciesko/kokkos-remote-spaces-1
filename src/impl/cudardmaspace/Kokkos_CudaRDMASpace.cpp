@@ -83,7 +83,7 @@ void CudaRDMASpace::deallocate(void *const arg_alloc_ptr, const size_t) const {
 }
 
 void CudaRDMASpace::fence() {
-  Kokkos::fence(); //FIXME: check if the Kokkos fence is required
+  //Kokkos::fence(); //FIXME: check if the Kokkos fence is required
   MPI_Barrier(MPI_COMM_WORLD);  
 }
 
