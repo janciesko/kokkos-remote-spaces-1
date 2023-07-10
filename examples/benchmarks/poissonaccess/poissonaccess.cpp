@@ -26,7 +26,7 @@
 
 using GenPool_t     = Kokkos::Random_XorShift64_Pool<>;
 using RemoteSpace_t = Kokkos::Experimental::DefaultRemoteMemorySpace;
-using RemoteView_t  = Kokkos::View<double**, RemoteSpace_t>;
+using RemoteView_t  = Kokkos::View<double**, Kokkos::PartitionedLayoutLeft, RemoteSpace_t>;
 using Team_t        = Kokkos::TeamPolicy<>::member_type;
 
 #define MASK (2 << 27)
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
       Kokkos::Timer timer;
       // stream through the array and essentially just copy it over
       // based on the logic above, some subset of the accesses will
-      //"miss", causing a remote access
+      // "miss", causing a remote access
       Kokkos::parallel_for(
           "work", policy, KOKKOS_LAMBDA(const Team_t& team) {
             uint64_t offset = uint64_t(team.league_rank()) * team_size;
