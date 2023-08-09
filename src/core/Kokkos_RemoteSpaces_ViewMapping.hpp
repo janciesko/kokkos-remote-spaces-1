@@ -28,60 +28,50 @@ namespace Kokkos {
 
 namespace Experimental {
 
-template <typename T>
-std::pair<size_t, size_t> get_range(
-    T &v, size_t pe,
-    typename std::enable_if<!std::is_integral<T>::value>::type * = nullptr) {
-  static_assert(!(std::is_same<typename T::traits::array_layout,
-                               Kokkos::PartitionedLayoutRight>::value ||
-                  std::is_same<typename T::traits::array_layout,
-                               Kokkos::PartitionedLayoutLeft>::value ||
-                  std::is_same<typename T::traits::array_layout,
-                               Kokkos::PartitionedLayoutStride>::value),
-                "get_local_range over partitioned layouts are not allowed");
+// We currently do not support this overload
+// This would require to add a member var to layout
 
-  // JC: Error out also in this case as we need to access the original dim0 of
-  // the View and not the rounded dim0 of the View. Fix would need to add
-  // get_mapping to View
-  static_assert((std::is_same<typename T::traits::array_layout,
-                              Kokkos::PartitionedLayoutRight>::value ||
-                 std::is_same<typename T::traits::array_layout,
-                              Kokkos::PartitionedLayoutLeft>::value ||
-                 std::is_same<typename T::traits::array_layout,
-                              Kokkos::PartitionedLayoutStride>::value),
-                "get_local_range overload currently unsupported");
+// template <typename T>
+// std::pair<size_t, size_t> get_range(
+//     T &v, size_t pe,
+//     typename std::enable_if<!std::is_integral<T>::value>::type * = nullptr) {
+//   static_assert(!(std::is_same<typename T::traits::array_layout,
+//                                Kokkos::PartitionedLayoutRight>::value ||
+//                   std::is_same<typename T::traits::array_layout,
+//                                Kokkos::PartitionedLayoutLeft>::value ||
+//                   std::is_same<typename T::traits::array_layout,
+//                                Kokkos::PartitionedLayoutStride>::value),
+//                 "get_local_range over partitioned layouts are not allowed");
 
-  size_t extent_dim0 = v.extent(0);
-  return getRange(extent_dim0, pe);
-}
+//   static_assert((std::is_same<typename T::traits::specialize,
+//                                Kokkos::Experimental::RemoteSpaceSpecializeTag>::value),
+//                 "Requires a globally allocated view");
 
-template <typename T>
-std::pair<size_t, size_t> get_local_range(
-    T &v,
-    typename std::enable_if<!std::is_integral<T>::value>::type * = nullptr) {
-  static_assert(!(std::is_same<typename T::traits::array_layout,
-                               Kokkos::PartitionedLayoutRight>::value ||
-                  std::is_same<typename T::traits::array_layout,
-                               Kokkos::PartitionedLayoutLeft>::value ||
-                  std::is_same<typename T::traits::array_layout,
-                               Kokkos::PartitionedLayoutStride>::value),
-                "get_local_range over partitioned layouts are not allowed");
+//   if (pe == get_my_pe())
+//     return std::pair(0,v.extent(0));
 
-  // JC: Error out also in this case as we need to access the original dim0 of
-  // the View and not the rounded dim0 of the View. Fix would need to add
-  // get_mapping to View
-  static_assert((std::is_same<typename T::traits::array_layout,
-                              Kokkos::PartitionedLayoutRight>::value ||
-                 std::is_same<typename T::traits::array_layout,
-                              Kokkos::PartitionedLayoutLeft>::value ||
-                 std::is_same<typename T::traits::array_layout,
-                              Kokkos::PartitionedLayoutStride>::value),
-                "get_local_range overload currently unsupported");
+//   //find out how the local range has been computed and derive range
+//   // For now this overload is unsupported.
+//   // return ...
+// }
 
-  size_t pe          = get_my_pe();
-  size_t extent_dim0 = v.extent(0);
-  return getRange(extent_dim0, pe);
-}
+// template <typename T>
+// std::pair<size_t, size_t> get_local_range(
+//     T &v,
+//     typename std::enable_if<!std::is_integral<T>::value>::type * = nullptr) {
+//   static_assert(!(std::is_same<typename T::traits::array_layout,
+//                                Kokkos::PartitionedLayoutRight>::value ||
+//                   std::is_same<typename T::traits::array_layout,
+//                                Kokkos::PartitionedLayoutLeft>::value ||
+//                   std::is_same<typename T::traits::array_layout,
+//                                Kokkos::PartitionedLayoutStride>::value),
+//                 "get_local_range over partitioned layouts are not allowed");
+
+//   static_assert((std::is_same<typename T::traits::specialize,
+//                                Kokkos::Experimental::RemoteSpaceSpecializeTag>::value),
+//                 "Requires a globally allocated view");
+//   return std::pair(0,v.extent(0));
+// }
 
 template <typename T>
 std::pair<size_t, size_t> get_range(
@@ -820,7 +810,7 @@ class ViewMapping<Traits, Kokkos::Experimental::RemoteSpaceSpecializeTag> {
   // TODO: move this to kokkos::view_offset (new template specialization
   // on RemoteSpace space type for all default layouts and also one for
   // all partitioned laytouts. Wait for mdspan.)
-  template <typename I0, typename T = Traits>
+  template <typename I0>
   KOKKOS_INLINE_FUNCTION dim0_offsets
   compute_dim0_offsets(const I0 &_i0) const {
     size_t target_pe, dim0_mod, i0;
@@ -831,8 +821,13 @@ class ViewMapping<Traits, Kokkos::Experimental::RemoteSpaceSpecializeTag> {
     return {target_pe, dim0_mod};
   }
 
-  template <typename I0, typename T = Traits>
+  KOKKOS_INLINE_FUNCTION size_t get_owning_pe() const {
+    if (m_offset_remote_dim)
+      return compute_dim0_offsets(m_offset_remote_dim).pe;
+    return pe;
+  }
 
+  template <typename I0, typename T = Traits>
   KOKKOS_INLINE_FUNCTION const reference_type reference(
       const I0 &i0,
       typename std::enable_if<
