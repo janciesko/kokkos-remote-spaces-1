@@ -385,7 +385,7 @@ void test_localdeepcopy_withSubview(
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   next_rank = (my_rank + 1) % num_ranks;
-  prev_rank = (my_rank - 1 < 0)? num_ranks -1 : my_rank -1 ;
+  prev_rank = (my_rank - 1 < 0) ? num_ranks - 1 : my_rank - 1;
 
   if (num_ranks % 2 && num_ranks > 1) return;  // skip
 
@@ -442,7 +442,7 @@ void test_localdeepcopy_withSubview(
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   next_rank = (my_rank + 1) % num_ranks;
-  prev_rank = (my_rank - 1 < 0)? num_ranks -1 : my_rank -1 ;
+  prev_rank = (my_rank - 1 < 0) ? num_ranks - 1 : my_rank - 1;
 
   if (num_ranks % 2 && num_ranks > 1) return;  // skip
 

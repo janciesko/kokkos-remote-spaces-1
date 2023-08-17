@@ -86,13 +86,15 @@ void KOKKOS_INLINE_FUNCTION local_deep_copy_contiguous(
          std::is_same<typename ViewTraits<ST, SP...>::specialize,
                       Kokkos::Experimental::RemoteSpaceSpecializeTag>::value)>::
         type * = nullptr) {
-  int src_rank = src.impl_map().get_owning_pe();
-  int dst_rank = dst.impl_map().get_owning_pe();
-  int my_rank  = get_my_pe();
+  size_t src_rank = src.impl_map().get_owning_pe();
+  size_t dst_rank = dst.impl_map().get_owning_pe();
+  size_t my_rank  = get_my_pe();
 
   if (src_rank != my_rank && dst_rank != my_rank)
     static_assert(
         "local_deep_copy allows only one view with remote data access");
+
+  printf("local_deep_cpy: %li, %li\n", dst_rank, src_rank);
 
   using src_data_block_t = Kokkos::Impl::NVSHMEMBlockDataHandle<
       typename ViewTraits<ST, SP...>::value_type, ViewTraits<ST, SP...>>;
@@ -102,11 +104,11 @@ void KOKKOS_INLINE_FUNCTION local_deep_copy_contiguous(
   if (src_rank != my_rank) {
     src_data_block_t src_data =
         src_data_block_t(dst.data(), src.data(), src.span(), src_rank);
-    src_data.get();
+    //  src_data.get();
   } else if (dst_rank != my_rank) {
     dst_data_block_t dst_data =
         dst_data_block_t(dst.data(), src.data(), dst.span(), dst_rank);
-    dst_data.put();
+    //  dst_data.put();
   } else {
     // Data resides within the node, copy as usual
     for (size_t i = 0; i < src.span(); ++i) dst.data()[i] = src.data()[i];

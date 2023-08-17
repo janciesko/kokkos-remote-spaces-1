@@ -74,14 +74,14 @@ namespace Experimental {
 // }
 
 template <typename T>
-std::pair<size_t, size_t> get_range(
+Kokkos::pair<size_t, size_t> get_range(
     T size, size_t pe,
     typename std::enable_if<std::is_integral<T>::value>::type * = nullptr) {
   return getRange(size, pe);
 }
 
 template <typename T>
-std::pair<size_t, size_t> get_local_range(
+Kokkos::pair<size_t, size_t> get_local_range(
     T size,
     typename std::enable_if<std::is_integral<T>::value>::type * = nullptr) {
   size_t pe = get_my_pe();
@@ -263,6 +263,7 @@ class ViewMapping<
     // and subviews
     dst.m_offset_remote_dim = extents.domain_offset(0);
     dst.dim0_is_pe          = R0;
+    printf("assign:%i, %i\n", dst.m_local_dim0, dst.m_offset_remote_dim);
 
 #ifdef KRS_ENABLE_MPISPACE
     // Subviews propagate MPI_Window of the original view
@@ -822,8 +823,11 @@ class ViewMapping<Traits, Kokkos::Experimental::RemoteSpaceSpecializeTag> {
   }
 
   KOKKOS_INLINE_FUNCTION size_t get_owning_pe() const {
-    if (m_offset_remote_dim)
+    if (m_local_dim0 > 0) {
+      printf("PE:%li,%li,%li\n", compute_dim0_offsets(m_offset_remote_dim).pe,
+             m_offset_remote_dim, m_local_dim0);
       return compute_dim0_offsets(m_offset_remote_dim).pe;
+    }
     return pe;
   }
 

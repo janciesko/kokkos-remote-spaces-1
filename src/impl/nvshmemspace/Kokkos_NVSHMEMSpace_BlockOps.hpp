@@ -85,13 +85,12 @@ struct NVSHMEMBlockDataElement<T, Traits> {
       : src(src_), dst(dst_), nelems(size_), pe(pe_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void put() const {
-    shmem_block_type_put(dst, src, nelems, pe);
-  }
+  void put() const { shmem_block_type_put(dst, src, nelems, pe); }
 
   KOKKOS_INLINE_FUNCTION
   void get() const {
     shmem_block_type_get(dst, src, nelems, pe);
+    printf("GET!\n");
   }
 };
 

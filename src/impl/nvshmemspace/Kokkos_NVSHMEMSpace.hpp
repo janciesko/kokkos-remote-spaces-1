@@ -90,10 +90,8 @@ KOKKOS_FUNCTION
 size_t get_my_pe();
 KOKKOS_FUNCTION
 size_t get_indexing_block_size(size_t size);
-
-std::pair<size_t, size_t> getRange(size_t size, size_t pe);
 KOKKOS_FUNCTION
-size_t getRangeOnDevice(size_t size, size_t pe);
+Kokkos::pair<size_t, size_t> getRange(size_t size, size_t pe);
 
 }  // namespace Experimental
 }  // namespace Kokkos
