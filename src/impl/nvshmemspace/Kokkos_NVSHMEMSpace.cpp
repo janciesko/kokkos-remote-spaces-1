@@ -61,7 +61,9 @@ void *NVSHMEMSpace::impl_allocate(
 
   void *ptr = nullptr;
 
-  if (arg_alloc_size) {
+  auto perRank_arg_alloc_size = get_indexing_block_size(arg_alloc_size);
+
+  if (perRank_arg_alloc_size) {
     // Over-allocate to and round up to guarantee proper alignment.
     //  size_t size_padded = arg_alloc_size + sizeof(void *) + alignment;
 
@@ -70,7 +72,7 @@ void *NVSHMEMSpace::impl_allocate(
       int my_id   = nvshmem_my_pe();
       ptr         = /*(Kokkos::Impl::MEMORY_ALIGNMENT,
                           arg_alloc_size); */
-          nvshmem_malloc(arg_alloc_size);
+          nvshmem_malloc(perRank_arg_alloc_size);
     } else {
       Kokkos::abort("SHMEMSpace only supports symmetric allocation policy.");
     }
@@ -102,15 +104,17 @@ void *NVSHMEMSpace::impl_allocate(
 
 void NVSHMEMSpace::deallocate(void *const arg_alloc_ptr,
                               const size_t arg_alloc_size) const {
-  deallocate("[unlabeled]", arg_alloc_ptr, arg_alloc_size);
+  auto perRank_arg_alloc_size = get_indexing_block_size(arg_alloc_size);
+  deallocate("[unlabeled]", arg_alloc_ptr, perRank_arg_alloc_size);
 }
 
 void NVSHMEMSpace::deallocate(const char *arg_label, void *const arg_alloc_ptr,
                               const size_t arg_alloc_size,
                               const size_t
-
                                   arg_logical_size) const {
-  impl_deallocate(arg_label, arg_alloc_ptr, arg_alloc_size, arg_logical_size);
+  auto perRank_arg_alloc_size = get_indexing_block_size(arg_alloc_size);
+  auto perRank_arg_logical_size = get_indexing_block_size(arg_logical_size);
+  impl_deallocate(arg_label, arg_alloc_ptr, perRank_arg_alloc_size, perRank_arg_logical_size);
 }
 
 void NVSHMEMSpace::impl_deallocate(

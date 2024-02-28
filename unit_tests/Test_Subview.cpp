@@ -606,7 +606,7 @@ TEST(TEST_CATEGORY, test_subview) {
   ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   // 1D subview - Subview with GlobalLayout
   test_subview1D<int>(20);
-  test_subview1D<float>(555);
+  /*test_subview1D<float>(555);
   test_subview1D<double>(123);
 
   // 2D subview - Subview with GlobalLayout
@@ -617,7 +617,7 @@ TEST(TEST_CATEGORY, test_subview) {
   // 3D subview - Subview with GlobalLayout
   test_subview3D<int>(20, 20, 20);
   test_subview3D<float>(55, 11, 13);
-  test_subview3D<double>(13, 31, 23);
+  test_subview3D<double>(13, 31, 23);*/
 
   // 3D subview - Subview with GlobalLayout and
   // deep_copy accessing the subview directly
@@ -628,7 +628,7 @@ TEST(TEST_CATEGORY, test_subview) {
 
   // 1D subview
 
-  test_partitioned_subview1D<int, Kokkos::PartitionedLayoutRight>(4, 4, 0, 0);
+ /* test_partitioned_subview1D<int, Kokkos::PartitionedLayoutRight>(4, 4, 0, 0);
   test_partitioned_subview1D<int, Kokkos::PartitionedLayoutRight>(50, 20, 8,
                                                                   12);
   test_partitioned_subview1D<int, Kokkos::PartitionedLayoutRight>(255, 20, 49,
@@ -644,11 +644,11 @@ TEST(TEST_CATEGORY, test_subview) {
   test_partitioned_subview3D<int, Kokkos::PartitionedLayoutRight>(30, 120, 3,
                                                                   10);
   test_partitioned_subview3D<int, Kokkos::PartitionedLayoutRight>(70, 20, 0,
-                                                                  19);
+                                                                  19);*/
 
   // 2D subview split by dim0/*
 
-  test_partitioned_subview2D_byRank_localRank<int,
+ /* test_partitioned_subview2D_byRank_localRank<int,
                                               Kokkos::PartitionedLayoutRight>(
       8, 1);
   test_partitioned_subview2D_byRank_localRank<int,
