@@ -334,19 +334,19 @@ class ViewMapping<
 
     const SubviewExtents<SrcTraits::rank, rank> extents(src.m_offset.m_dim,
                                                         args...);
-    dst.m_offset                    = dst_offset_type(src.m_offset, extents);
-    dst.remote_view_props           = src.remote_view_props;
+    dst.m_offset                  = dst_offset_type(src.m_offset, extents);
+    dst.remote_view_props         = src.remote_view_props;
     bool switch_to_local_indexing = false;
 
     /*We currently support only subviews of subviews where the first subview is
      created with a scalar over the leading dim*/
-    /*Subviews that span across multiple nodes cannot have subviews in this version
-    */
+    /*Subviews that span across multiple nodes cannot have subviews in this
+     * version
+     */
     if (!src.remote_view_props.using_local_indexing) {
       dst.remote_view_props.using_local_indexing = !R0 ? true : false;
-      dst.remote_view_props.R0_offset = extents.domain_offset(0);
-    }
-    else
+      dst.remote_view_props.R0_offset            = extents.domain_offset(0);
+    } else
       switch_to_local_indexing = true;
 
     typename view_type::size_type offset;
@@ -362,7 +362,7 @@ class ViewMapping<
                   extents.domain_offset(3), extents.domain_offset(4),
                   extents.domain_offset(5), extents.domain_offset(6),
                   extents.domain_offset(7));
-                  
+
 #ifdef KRS_ENABLE_MPISPACE
     // Subviews propagate MPI_Window of the original view
     dst.m_handle = ViewDataHandle<DstTraits>::assign(
@@ -416,7 +416,7 @@ class ViewMapping<Traits, Kokkos::Experimental::RemoteSpaceSpecializeTag> {
   template <typename T = Traits>
   KOKKOS_INLINE_FUNCTION int get_logical_PE(ENABLE_IF_GLOBAL_LAYOUT) const {
     // If View is subview, compute owning PE of index R0_offset
-    if (USING_LOCAL_INDEXING)
+    if (USING_GLOBAL_INDEXING && remote_view_props.R0_offset != 0)
       return compute_dim0_offsets(remote_view_props.R0_offset).PE;
     // Else, return my_PE
     return remote_view_props.my_PE;
@@ -425,7 +425,8 @@ class ViewMapping<Traits, Kokkos::Experimental::RemoteSpaceSpecializeTag> {
   template <typename T = Traits>
   KOKKOS_INLINE_FUNCTION int get_logical_PE(
       ENABLE_IF_PARTITIONED_LAYOUT) const {
-    if (USING_LOCAL_INDEXING) return remote_view_props.R0_offset;
+    if (USING_GLOBAL_INDEXING && remote_view_props.R0_offset != 0)
+      return remote_view_props.R0_offset;
     return remote_view_props.my_PE;
   }
 
