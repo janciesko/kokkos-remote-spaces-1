@@ -338,11 +338,9 @@ class ViewMapping<
     dst.remote_view_props         = src.remote_view_props;
     bool switch_to_local_indexing = false;
 
-    /*We currently support only subviews of subviews where the first subview is
-     created with a scalar over the leading dim*/
-    /*Subviews that span across multiple nodes cannot have subviews in this
-     * version
+    /* Currently we only have a restricted support of subviews of subviews.
      */
+
     if (!src.remote_view_props.using_local_indexing) {
       dst.remote_view_props.using_local_indexing = !R0 ? true : false;
       dst.remote_view_props.R0_offset            = extents.domain_offset(0);
