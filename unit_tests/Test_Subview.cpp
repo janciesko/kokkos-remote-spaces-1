@@ -26,14 +26,14 @@
 
 using RemoteSpace_t = Kokkos::Experimental::DefaultRemoteMemorySpace;
 
-template <class Data_t>
+template <class Data_t, class Layout>
 void test_subview1D(int i1) {
   int my_rank;
   int num_ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
-  using ViewRemote_1D_t = Kokkos::View<Data_t *, RemoteSpace_t>;
+  using ViewRemote_1D_t = Kokkos::View<Data_t *, Layout, RemoteSpace_t>;
   using ViewHost_1D_t   = typename ViewRemote_1D_t::HostMirror;
 
   using TeamPolicy_t = Kokkos::TeamPolicy<>;
@@ -73,7 +73,7 @@ void test_subview1D(int i1) {
   }
 }
 
-template <class Data_t>
+template <class Data_t, class Layout>
 void test_subview2D(int i1, int i2) {
   int my_rank;
   int num_ranks;
@@ -120,7 +120,7 @@ void test_subview2D(int i1, int i2) {
     for (int j = 0; j < v_h.extent(1); ++j) ASSERT_EQ(v_h(i, j), 2);
 }
 
-template <class Data_t>
+template <class Data_t, class Layout>
 void test_subview3D(int i1, int i2, int i3) {
   int my_rank;
   int num_ranks;
@@ -170,14 +170,14 @@ void test_subview3D(int i1, int i2, int i3) {
       for (int k = 0; k < v_h.extent(2); ++k) ASSERT_EQ(v_h(i, j, k), 2);
 }
 
-template <class Data_t>
+template <class Data_t, class Layout>
 void test_subview3D_byRank(int i1, int i2, int i3) {
   int my_rank;
   int num_ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
-  using ViewRemote_3D_t = Kokkos::View<Data_t ***, RemoteSpace_t>;
+  using ViewRemote_3D_t = Kokkos::View<Data_t ***, Layout, RemoteSpace_t>;
   using ViewRemote_2D_t =
       Kokkos::View<Data_t **, Kokkos::LayoutStride, RemoteSpace_t>;
   using ViewHost_3D_t = typename ViewRemote_3D_t::HostMirror;
@@ -245,14 +245,14 @@ void test_subview3D_byRank(int i1, int i2, int i3) {
   }
 }
 
-template <class Data_t>
+template <class Data_t, class Layout>
 void test_subviewOfSubview_Scalar_3D(int i1, int i2, int i3) {
   int my_rank;
   int num_ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
-  using ViewRemote_3D_t = Kokkos::View<Data_t ***, RemoteSpace_t>;
+  using ViewRemote_3D_t = Kokkos::View<Data_t ***, Layout, RemoteSpace_t>;
   using ViewRemote_2D_t =
       Kokkos::View<Data_t **, Kokkos::LayoutStride, RemoteSpace_t>;
   using ViewHost_3D_t = typename ViewRemote_3D_t::HostMirror;
@@ -305,7 +305,7 @@ void test_subviewOfSubview_Scalar_3D(int i1, int i2, int i3) {
         for (int k = 0; k < v_h.extent(2); ++k) ASSERT_EQ(v_h(i, j, k), 2);
 }
 
-template <class Data_t>
+template <class Data_t, class Layout>
 void test_subviewOfSubview_Range_3D(int i1, int i2, int i3) {
   int my_rank;
   int num_ranks;
@@ -314,7 +314,7 @@ void test_subviewOfSubview_Range_3D(int i1, int i2, int i3) {
 
   int i2_half = static_cast<int>(i2 * 0.5);
 
-  using ViewRemote_3D_t = Kokkos::View<Data_t ***, RemoteSpace_t>;
+  using ViewRemote_3D_t = Kokkos::View<Data_t ***, Layout, RemoteSpace_t>;
   using ViewHost_3D_t   = typename ViewRemote_3D_t::HostMirror;
 
   ViewRemote_3D_t v = ViewRemote_3D_t("RemoteView", i1, i2, i3);
@@ -601,7 +601,6 @@ void test_partitioned_subviewOfSubviewRange_2D(int i1, int i2) {
   next_rank = (my_rank + 1) % num_ranks;
 
   using ViewRemote_3D_t = Kokkos::View<Data_t ***, Layout, RemoteSpace_t>;
-  using ViewRemote_2D_t = Kokkos::View<Data_t **, Layout, RemoteSpace_t>;
   using ViewHost_3D_t   = typename ViewRemote_3D_t::HostMirror;
 
   ViewRemote_3D_t v = ViewRemote_3D_t("RemoteView", num_ranks, i1, i2);
@@ -646,7 +645,6 @@ void test_partitioned_subviewOfSubviewScalar_2D(int i1, int i2) {
   next_rank = (my_rank + 1) % num_ranks;
 
   using ViewRemote_3D_t = Kokkos::View<Data_t ***, Layout, RemoteSpace_t>;
-  using ViewRemote_2D_t = Kokkos::View<Data_t **, Layout, RemoteSpace_t>;
   using ViewHost_3D_t   = typename ViewRemote_3D_t::HostMirror;
 
   ViewRemote_3D_t v = ViewRemote_3D_t("RemoteView", num_ranks, i1, i2);
@@ -677,25 +675,30 @@ void test_partitioned_subviewOfSubviewScalar_2D(int i1, int i2) {
       for (int j = 0; j < i2; ++j) ASSERT_EQ(v_h(0, i, j), my_rank + 1);
 }
 
-#define GENBLOCK1(TYPE)           \
-  test_subview1D<TYPE>(555);      \
-  test_subview2D<TYPE>(123, 321); \
-  test_subview3D<TYPE>(13, 31, 23);
+#define GENBLOCK1(TYPE, LAYOUT)           \
+  test_subview1D<TYPE, LAYOUT>(555);      \
+  test_subview2D<TYPE, LAYOUT>(123, 321); \
+  test_subview3D<TYPE, LAYOUT>(13, 31, 23);
 
-#define GENBLOCK2(TYPE)                    \
-  test_subview3D_byRank<TYPE>(5, 5, 5);    \
-  test_subview3D_byRank<TYPE>(10, 11, 12); \
-  test_subview3D_byRank<TYPE>(13, 31, 23);
+#define GENBLOCK2(TYPE, LAYOUT)                    \
+  test_subview3D_byRank<TYPE, LAYOUT>(5, 5, 5);    \
+  test_subview3D_byRank<TYPE, LAYOUT>(10, 11, 12); \
+  test_subview3D_byRank<TYPE, LAYOUT>(13, 31, 23);
 
-#define GENBLOCK3(TYPE) \
-  DIE(test_subview3D_DCCopiesSubviewAccess<TYPE>(13, 31, 23));
+#define GENBLOCK3(TYPE, LAYOUT) \
+  DIE(test_subview3D_DCCopiesSubviewAccess<TYPE, LAYOUT>(13, 31, 23));
 
-#define GENBLOCK4(TYPE)                             \
-  test_subviewOfSubview_Range_3D<TYPE>(20, 20, 20); \
-  test_subviewOfSubview_Range_3D<TYPE>(55, 11, 13); \
-  test_subviewOfSubview_Range_3D<TYPE>(13, 31, 23);
+#define GENBLOCK4(TYPE, LAYOUT)                              \
+  test_subviewOfSubview_Scalar_3D<TYPE, LAYOUT>(20, 20, 20); \
+  test_subviewOfSubview_Scalar_3D<TYPE, LAYOUT>(55, 11, 13); \
+  test_subviewOfSubview_Scalar_3D<TYPE, LAYOUT>(13, 31, 23);
 
-#define GENBLOCK5(TYPE, LAYOUT)                              \
+#define GENBLOCK5(TYPE, LAYOUT)                             \
+  test_subviewOfSubview_Range_3D<TYPE, LAYOUT>(20, 20, 20); \
+  test_subviewOfSubview_Range_3D<TYPE, LAYOUT>(55, 11, 13); \
+  test_subviewOfSubview_Range_3D<TYPE, LAYOUT>(13, 31, 23);
+
+#define GENBLOCK6(TYPE, LAYOUT)                              \
   test_partitioned_subview1D<TYPE, LAYOUT>(4, 4, 0, 0);      \
   test_partitioned_subview1D<TYPE, LAYOUT>(50, 20, 8, 12);   \
   test_partitioned_subview1D<TYPE, LAYOUT>(255, 20, 49, 19); \
@@ -706,7 +709,7 @@ void test_partitioned_subviewOfSubviewScalar_2D(int i1, int i2) {
   test_partitioned_subview3D<TYPE, LAYOUT>(30, 120, 3, 10);  \
   test_partitioned_subview3D<TYPE, LAYOUT>(70, 20, 0, 19);
 
-#define GENBLOCK6(TYPE, LAYOUT)                                      \
+#define GENBLOCK7(TYPE, LAYOUT)                                      \
   test_partitioned_subview2D_byRank_localRank<TYPE, LAYOUT>(8, 1);   \
   test_partitioned_subview2D_byRank_localRank<TYPE, LAYOUT>(55, 20); \
   test_partitioned_subview2D_byRank_localRank<TYPE, LAYOUT>(50, 77); \
@@ -714,12 +717,12 @@ void test_partitioned_subviewOfSubviewScalar_2D(int i1, int i2) {
   test_partitioned_subview2D_byRank_nextRank<TYPE, LAYOUT>(55, 20);  \
   test_partitioned_subview2D_byRank_nextRank<TYPE, LAYOUT>(50, 77);
 
-#define GENBLOCK7(TYPE, LAYOUT)                                    \
+#define GENBLOCK8(TYPE, LAYOUT)                                    \
   test_partitioned_subviewOfSubviewRange_2D<TYPE, LAYOUT>(8, 1);   \
   test_partitioned_subviewOfSubviewRange_2D<TYPE, LAYOUT>(55, 20); \
   test_partitioned_subviewOfSubviewRange_2D<TYPE, LAYOUT>(50, 77);
 
-#define GENBLOCK8(TYPE, LAYOUT)                                     \
+#define GENBLOCK9(TYPE, LAYOUT)                                     \
   test_partitioned_subviewOfSubviewScalar_2D<TYPE, LAYOUT>(8, 1);   \
   test_partitioned_subviewOfSubviewScalar_2D<TYPE, LAYOUT>(55, 20); \
   test_partitioned_subviewOfSubviewScalar_2D<TYPE, LAYOUT>(50, 77);
@@ -727,15 +730,28 @@ void test_partitioned_subviewOfSubviewScalar_2D(int i1, int i2) {
 TEST(TEST_CATEGORY, test_subview) {
   ::testing::FLAGS_gtest_death_test_style = "threadsafe";
 
+  using LL_t  = Kokkos::LayoutLeft;
+  using LR_t  = Kokkos::LayoutRight;
+  using PLL_t = Kokkos::PartitionedLayoutLeft;
+  using PLR_t = Kokkos::PartitionedLayoutRight;
+
   // Subview with GlobalLayout
-  GENBLOCK1(int);
-  GENBLOCK1(float);
-  GENBLOCK1(double);
+  GENBLOCK1(int, LR_t);
+  GENBLOCK1(float, LR_t);
+  GENBLOCK1(double, LR_t);
+
+  GENBLOCK1(int, LL_t);
+  GENBLOCK1(float, LL_t);
+  GENBLOCK1(double, LL_t);
 
   // Subview with GlobalLayout and split by dim0
-  GENBLOCK2(int);
-  GENBLOCK2(float);
-  GENBLOCK2(double);
+  GENBLOCK2(int, LR_t);
+  GENBLOCK2(float, LR_t);
+  GENBLOCK2(double, LR_t);
+
+  GENBLOCK2(int, LL_t);
+  GENBLOCK2(float, LL_t);
+  GENBLOCK2(double, LL_t);
 
   // 3D subview - Subview with GlobalLayout and
   // deep_copy accessing the subview directly
@@ -746,35 +762,59 @@ TEST(TEST_CATEGORY, test_subview) {
 
   // 3D subview - Subview of subview with GlobalLayout
   // Unsupported use case
-  // GENBLOCK4(int)
-  // GENBLOCK4(float)
-  // GENBLOCK4(double)
+  GENBLOCK4(int, LR_t);
+  GENBLOCK4(float, LR_t);
+  GENBLOCK4(double, LR_t);
+
+  GENBLOCK4(int, LL_t);
+  GENBLOCK4(float, LL_t);
+  GENBLOCK4(double, LL_t);
+
+  // 3D subview - Subview of subview with GlobalLayout
+  // Unsupported use case
+  GENBLOCK5(int, LR_t);
+  GENBLOCK5(float, LR_t);
+  GENBLOCK5(double, LR_t);
+
+  GENBLOCK5(int, LL_t);
+  GENBLOCK5(float, LL_t);
+  GENBLOCK5(double, LL_t);
 
   // Subiew with PartitionedLayout*
-  GENBLOCK5(int, Kokkos::PartitionedLayoutRight);
-  GENBLOCK5(float, Kokkos::PartitionedLayoutRight);
-  GENBLOCK5(double, Kokkos::PartitionedLayoutRight);
-  GENBLOCK5(int, Kokkos::PartitionedLayoutLeft);
-  GENBLOCK5(float, Kokkos::PartitionedLayoutLeft);
-  GENBLOCK5(double, Kokkos::PartitionedLayoutLeft);
+  GENBLOCK6(int, PLR_t);
+  GENBLOCK6(float, PLR_t);
+  GENBLOCK6(double, PLR_t);
+
+  GENBLOCK6(int, PLL_t);
+  GENBLOCK6(float, PLL_t);
+  GENBLOCK6(double, PLL_t);
 
   // Subiew with PartitionedLayout* and split by rank
-  GENBLOCK6(int, Kokkos::PartitionedLayoutRight);
-  GENBLOCK6(float, Kokkos::PartitionedLayoutRight);
-  GENBLOCK6(double, Kokkos::PartitionedLayoutRight);
-  GENBLOCK6(int, Kokkos::PartitionedLayoutLeft);
-  GENBLOCK6(float, Kokkos::PartitionedLayoutLeft);
-  GENBLOCK6(double, Kokkos::PartitionedLayoutLeft);
+  GENBLOCK7(int, PLR_t);
+  GENBLOCK7(float, PLR_t);
+  GENBLOCK7(double, PLR_t);
+
+  GENBLOCK7(int, PLL_t);
+  GENBLOCK7(float, PLL_t);
+  GENBLOCK7(double, PLL_t);
 
   // Subiew of subview with PartitionedLayout* and range
-  GENBLOCK7(int, Kokkos::PartitionedLayoutRight);
-  GENBLOCK7(float, Kokkos::PartitionedLayoutRight);
-  GENBLOCK7(double, Kokkos::PartitionedLayoutRight);
+  GENBLOCK8(int, PLR_t);
+  GENBLOCK8(float, PLR_t);
+  GENBLOCK8(double, PLR_t);
+
+  GENBLOCK8(int, PLL_t);
+  GENBLOCK8(float, PLL_t);
+  GENBLOCK8(double, PLL_t);
 
   // Subiew of subview with PartitionedLayout* and scalar
-  // GENBLOCK8(int, Kokkos::PartitionedLayoutLeft);
-  // GENBLOCK8(float, Kokkos::PartitionedLayoutLeft);
-  // GENBLOCK8(double, Kokkos::PartitionedLayoutLeft);
+  GENBLOCK9(int, PLL_t);
+  GENBLOCK9(float, PLL_t);
+  GENBLOCK9(double, PLL_t);
+
+  GENBLOCK9(int, PLL_t);
+  GENBLOCK9(float, PLL_t);
+  GENBLOCK9(double, PLL_t);
 
   RemoteSpace_t::fence();
 }

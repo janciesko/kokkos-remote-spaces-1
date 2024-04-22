@@ -1009,16 +1009,16 @@ TEST(TEST_CATEGORY, test_localdeepcopy) {
   GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, PLR_t, with_ranges);
 
   // Test with subviews created using scalars (decrements rank)
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, LL_t, with_scalar);
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, LL_t, with_scalar);
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, LR_t, with_scalar);
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, LR_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, LL_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, LL_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, LR_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, LR_t, with_scalar);
 
   // Support of partitioned subviews with rank decrement is currently n/a
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, PLR_t, with_scalar);
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, PLR_t, with_scalar);
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, PLL_t, with_scalar);
-  // GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, PLL_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, PLR_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, PLR_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(without_team, PLL_t, with_scalar);
+  GENBLOCK_LOCALDEEPCOPY_WITHSUBVIEW(with_team, PLL_t, with_scalar);
 
   RemoteSpace_t::fence();
 }
