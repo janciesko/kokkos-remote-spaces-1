@@ -76,8 +76,8 @@ struct Args_t {
   int N      = default_N;
   int iters  = default_Iters;
   int rma_op = default_RmaOp;
-  int ts = default_ts;
-  int ls = default_ls;
+  int ts     = default_ts;
+  int ls     = default_ls;
 };
 
 void print_help() {
@@ -141,7 +141,7 @@ struct Access<ViewType_t, typename std::enable_if_t<
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
     other_rank = my_rank ^ 1;
     assert(num_ranks == 2);
-    iters_per_team = args.N / LEAGUE_SIZE;
+    iters_per_team     = args.N / LEAGUE_SIZE;
     iters_per_team_mod = args.N % LEAGUE_SIZE;
   };
 
@@ -149,14 +149,14 @@ struct Access<ViewType_t, typename std::enable_if_t<
   void operator()(const InitTag &, const size_t i) const { v(i) = my_rank + 1; }
 
   KOKKOS_FUNCTION
-  void operator()(const UpdateTag &, typename team_policy_update_t::member_type team) const { 
-      int team_id = team.league_rank();
-      int start =  team_id * iters_per_team;
-      int end = start + iters_per_team;
-      int mod = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(team, start, end + mod), [&](const int i){
-        v(i) += v_tmp(i); 
-    });
+  void operator()(const UpdateTag &,
+                  typename team_policy_update_t::member_type team) const {
+    int team_id = team.league_rank();
+    int start   = team_id * iters_per_team;
+    int end     = start + iters_per_team;
+    int mod     = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
+    Kokkos::parallel_for(Kokkos::TeamThreadRange(team, start, end + mod),
+                         [&](const int i) { v(i) += v_tmp(i); });
   }
 
   KOKKOS_FUNCTION
@@ -189,9 +189,9 @@ struct Access<ViewType_t, typename std::enable_if_t<
         MPI_Recv(v_tmp_host.data(), N, MPI_DOUBLE, other_rank, TAG,
                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         Kokkos::deep_copy(v_tmp, v_tmp_host);
-        Kokkos::parallel_for(
-              "access_overhead",
-              team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE), *this);
+        Kokkos::parallel_for("access_overhead",
+                             team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE),
+                             *this);
         Kokkos::fence();
         time_b = timer.seconds();
         time += time_b - time_a;
@@ -244,7 +244,7 @@ struct Access_CudaAware<
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
     other_rank = my_rank ^ 1;
     assert(num_ranks == 2);
-    iters_per_team = args.N / LEAGUE_SIZE;
+    iters_per_team     = args.N / LEAGUE_SIZE;
     iters_per_team_mod = args.N % LEAGUE_SIZE;
   };
 
@@ -252,14 +252,14 @@ struct Access_CudaAware<
   void operator()(const InitTag &, const size_t i) const { v(i) = my_rank + 1; }
 
   KOKKOS_FUNCTION
-  void operator()(const UpdateTag &, typename team_policy_update_t::member_type team) const { 
-      int team_id = team.league_rank();
-      int start =  team_id * iters_per_team;
-      int end = start + iters_per_team;
-      int mod = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(team, start, end + mod), [&](const int i){
-        v(i) += v_tmp(i); 
-    });
+  void operator()(const UpdateTag &,
+                  typename team_policy_update_t::member_type team) const {
+    int team_id = team.league_rank();
+    int start   = team_id * iters_per_team;
+    int end     = start + iters_per_team;
+    int mod     = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
+    Kokkos::parallel_for(Kokkos::TeamThreadRange(team, start, end + mod),
+                         [&](const int i) { v(i) += v_tmp(i); });
   }
 
   KOKKOS_FUNCTION
@@ -287,9 +287,9 @@ struct Access_CudaAware<
       } else {
         MPI_Recv(v_tmp.data(), N, MPI_DOUBLE, other_rank, TAG, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
-        Kokkos::parallel_for(
-              "access_overhead",
-              team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE), *this);
+        Kokkos::parallel_for("access_overhead",
+                             team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE),
+                             *this);
         Kokkos::fence();
         time_b = timer.seconds();
         time += time_b - time_a;
@@ -337,7 +337,7 @@ struct Access<ViewType_t, typename std::enable_if_t<
     v          = ViewType_t(std::string(typeid(v).name()), num_ranks * args.N);
     auto local_range =
         Kokkos::Experimental::get_local_range(num_ranks * args.N);
-    iters_per_team = (local_range.second - local_range.first) / LEAGUE_SIZE;
+    iters_per_team     = (local_range.second - local_range.first) / LEAGUE_SIZE;
     iters_per_team_mod = (local_range.second - local_range.first) % LEAGUE_SIZE;
   };
 
@@ -349,30 +349,27 @@ struct Access<ViewType_t, typename std::enable_if_t<
     v(i) += v(other_rank * N + i);
   }
 
-    KOKKOS_FUNCTION
-  void operator()(const UpdateTag_get &, typename team_policy_update_t::member_type team) const { 
-      int team_id = team.league_rank();
-      int start =  team_id * iters_per_team;
-      int end = start + iters_per_team;
-      int mod = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(team, start, end + mod), [&](const int i){
-        v(i) += v(other_rank * N + i);
-    });
+  KOKKOS_FUNCTION
+  void operator()(const UpdateTag_get &,
+                  typename team_policy_update_t::member_type team) const {
+    int team_id = team.league_rank();
+    int start   = team_id * iters_per_team;
+    int end     = start + iters_per_team;
+    int mod     = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
+    Kokkos::parallel_for(Kokkos::TeamThreadRange(team, start, end + mod),
+                         [&](const int i) { v(i) += v(other_rank * N + i); });
   }
 
-
-
-    KOKKOS_FUNCTION
-  void operator()(const UpdateTag_put &, typename team_policy_update_t::member_type team) const { 
-      int team_id = team.league_rank();
-      int start =  team_id * iters_per_team;
-      int end = start + iters_per_team;
-      int mod = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(team, start, end + mod), [&](const int i){
-        v(other_rank * N + i) = v(i);
-    });
+  KOKKOS_FUNCTION
+  void operator()(const UpdateTag_put &,
+                  typename team_policy_update_t::member_type team) const {
+    int team_id = team.league_rank();
+    int start   = team_id * iters_per_team;
+    int end     = start + iters_per_team;
+    int mod     = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
+    Kokkos::parallel_for(Kokkos::TeamThreadRange(team, start, end + mod),
+                         [&](const int i) { v(other_rank * N + i) = v(i); });
   }
-
 
   KOKKOS_FUNCTION
   void operator()(const CheckTag &, const size_t i) const {
@@ -398,9 +395,9 @@ struct Access<ViewType_t, typename std::enable_if_t<
       for (int i = 0; i < iters; i++) {
         if (my_rank == 0) {
           time_a = timer.seconds();
-           Kokkos::parallel_for(
-              "access_overhead",
-              team_policy_get_update_t(LEAGUE_SIZE, TEAM_SIZE), *this);
+          Kokkos::parallel_for("access_overhead",
+                               team_policy_get_update_t(LEAGUE_SIZE, TEAM_SIZE),
+                               *this);
           Kokkos::fence();
           RemoteSpace_t().fence();
           time_b = timer.seconds();
@@ -487,7 +484,6 @@ struct Access_LDC<
   int iters_per_team;
   int iters_per_team_mod;
 
-
   Access_LDC(Args_t args)
       : N(args.N), iters(args.iters), mode(args.mode), rma_op(args.rma_op) {
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -498,7 +494,7 @@ struct Access_LDC<
     v_tmp      = ViewType_t(std::string(typeid(v).name()), num_ranks * args.N);
     auto local_range =
         Kokkos::Experimental::get_local_range(num_ranks * args.N);
-    iters_per_team = (local_range.second - local_range.first) / LEAGUE_SIZE;
+    iters_per_team     = (local_range.second - local_range.first) / LEAGUE_SIZE;
     iters_per_team_mod = (local_range.second - local_range.first) % LEAGUE_SIZE;
   };
 
@@ -518,15 +514,15 @@ struct Access_LDC<
                        iters * (other_rank + 1) + (my_rank + 1)));
   }
 
- KOKKOS_FUNCTION
-  void operator()(const UpdateTag &, typename team_policy_update_t::member_type team) const { 
-      int team_id = team.league_rank();
-      int start =  team_id * iters_per_team;
-      int end = start + iters_per_team;
-      int mod = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
-      Kokkos::parallel_for( Kokkos::TeamThreadRange(team, start, end + mod), [&](const int i){
-        v(i) += v_tmp(i); 
-    });
+  KOKKOS_FUNCTION
+  void operator()(const UpdateTag &,
+                  typename team_policy_update_t::member_type team) const {
+    int team_id = team.league_rank();
+    int start   = team_id * iters_per_team;
+    int end     = start + iters_per_team;
+    int mod     = (team_id == LEAGUE_SIZE - 1) ? iters_per_team_mod : 0;
+    Kokkos::parallel_for(Kokkos::TeamThreadRange(team, start, end + mod),
+                         [&](const int i) { v(i) += v_tmp(i); });
   }
 
   KOKKOS_FUNCTION
@@ -585,9 +581,9 @@ struct Access_LDC<
               *this);
           Kokkos::fence();
 #endif
-          Kokkos::parallel_for(
-              "access_overhead",
-              team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE), *this);
+          Kokkos::parallel_for("access_overhead",
+                               team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE),
+                               *this);
           Kokkos::fence();
           RemoteSpace_t().fence();
           time_b = timer.seconds();
@@ -612,9 +608,9 @@ struct Access_LDC<
               Kokkos::RangePolicy(local_range.first, local_range.second),
               *this);
 #endif
-          Kokkos::parallel_for(
-              "access_overhead",
-              team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE), *this);
+          Kokkos::parallel_for("access_overhead",
+                               team_policy_update_t(LEAGUE_SIZE, TEAM_SIZE),
+                               *this);
           Kokkos::fence();
           RemoteSpace_t().fence();
           time_b = timer.seconds();

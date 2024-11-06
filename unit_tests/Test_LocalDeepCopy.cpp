@@ -988,10 +988,10 @@ void test_localdeepcopy_withSubview(
   test_localdeepcopy_withSubview<int, Kokkos::HostSpace, RemoteSpace_t, TEAM, \
                                  get_op, IS_RANGES, LAYOUT>(12, 15);          \
   /* 2D with Subviews (put block transfer) */                                 \
- test_localdeepcopy_withSubview<int, Kokkos::HostSpace, RemoteSpace_t, TEAM, \
+  test_localdeepcopy_withSubview<int, Kokkos::HostSpace, RemoteSpace_t, TEAM, \
                                  put_op, IS_RANGES, LAYOUT>(5, 16);           \
   /* 2D with Subviews (get block transfer)*/                                  \
- test_localdeepcopy_withSubview<int64_t, Kokkos::HostSpace, RemoteSpace_t,   \
+  test_localdeepcopy_withSubview<int64_t, Kokkos::HostSpace, RemoteSpace_t,   \
                                  TEAM, get_op, IS_RANGES, LAYOUT>(12, 15);    \
   /* 2D with Subviews (put block transfer)*/                                  \
   test_localdeepcopy_withSubview<int64_t, Kokkos::HostSpace, RemoteSpace_t,   \

@@ -344,7 +344,7 @@ class ViewMapping<
     typename view_type::size_type offset;
     offset = switch_to_local_indexing ? total_offset : local_offset;
     dst.remote_view_props.total_offset = total_offset;
-    
+
 #ifdef KRS_ENABLE_MPISPACE
     // Subviews propagate MPI_Window of the original view
     dst.m_handle = ViewDataHandle<DstTraits>::assign(
@@ -396,9 +396,7 @@ class ViewMapping<Traits, Kokkos::Experimental::RemoteSpaceSpecializeTag> {
   int get_PE() const { return remote_view_props.my_PE; }
 
   KOKKOS_INLINE_FUNCTION
-  auto get_ptr() const {
-      return handle().ptr + remote_view_props.total_offset;
-  }
+  auto get_ptr() const { return handle().ptr + remote_view_props.total_offset; }
 
   template <typename T = Traits>
   KOKKOS_INLINE_FUNCTION int get_logical_PE(ENABLE_IF_GLOBAL_LAYOUT(T)) const {
